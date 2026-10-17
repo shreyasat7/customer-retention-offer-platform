@@ -45,9 +45,18 @@ pipeline {
     }
 
     environment {
-        ARTIFACT    = 'target/crop.war'
-        DEPLOY_URL  = "http://localhost:${params.DEPLOY_PORT}/${params.APP_CONTEXT}"
-        HEALTH_URL  = "http://localhost:${params.DEPLOY_PORT}/${params.APP_CONTEXT}/actuator/health"
+        ARTIFACT = 'target/crop.war'
+
+        // Parameters only exist from the second build onward - the first run of a
+        // parameterised job is what *defines* them. Resolving each one here with the
+        // same default keeps the very first build, and any rebuild from an older
+        // revision, working instead of failing on an unbound variable.
+        TOMCAT_HOME = "${params.TOMCAT_HOME ?: '/opt/homebrew/opt/tomcat/libexec'}"
+        DEPLOY_PORT = "${params.DEPLOY_PORT ?: '9090'}"
+        APP_CONTEXT = "${params.APP_CONTEXT ?: 'crop'}"
+
+        DEPLOY_URL = "http://localhost:${params.DEPLOY_PORT ?: '9090'}/${params.APP_CONTEXT ?: 'crop'}"
+        HEALTH_URL = "http://localhost:${params.DEPLOY_PORT ?: '9090'}/${params.APP_CONTEXT ?: 'crop'}/actuator/health"
     }
 
     stages {
@@ -97,7 +106,7 @@ pipeline {
 
         stage('Deploy to Tomcat') {
             when {
-                expression { return !params.SKIP_DEPLOY }
+                expression { return !(params.SKIP_DEPLOY ?: false) }
             }
             steps {
                 sh '''
@@ -116,7 +125,7 @@ pipeline {
 
         stage('Health check') {
             when {
-                expression { return !params.SKIP_DEPLOY }
+                expression { return !(params.SKIP_DEPLOY ?: false) }
             }
             steps {
                 sh '''
