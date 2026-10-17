@@ -1,17 +1,20 @@
 <!doctype html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{fragments/layout :: shell('New retention offer', 'Raise an offer for an at-risk customer', 'new', ~{::#actions}, ~{::section})}">
+      th:replace="~{fragments/layout :: shell(${editing} ? 'Edit retention offer' : 'New retention offer',
+                   ${editing} ? 'Correct a draft before it goes for approval' : 'Raise an offer for an at-risk customer',
+                   ${editing} ? 'offers' : 'new', ~{::#actions}, ~{::section})}">
 <body>
 
 <div id="actions">
-  <a class="btn btn--ghost" th:href="@{/offers}">
+  <a class="btn btn--ghost" th:href="${editing} ? @{/offers/{id}(id=${offer.id})} : @{/offers}">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-    Back to offers
+    <span th:text="${editing} ? 'Back to offer' : 'Back to offers'">Back</span>
   </a>
 </div>
 
 <section>
-  <form th:action="@{/offers}" th:object="${offer}" method="post" novalidate>
+  <form th:action="${editing} ? @{/offers/{id}(id=${offer.id})} : @{/offers}"
+        th:object="${offer}" method="post" novalidate>
 
     <!-- #fields resolves against the enclosing th:object, so the validation summary
          must live inside the form, not above it. -->
@@ -24,7 +27,8 @@
       <div class="card-head">
         <div>
           <h2>Offer details</h2>
-          <div class="sub">The offer is saved as a <b>draft</b> — it reaches the customer only after a manager approves it.</div>
+          <div class="sub" th:unless="${editing}">The offer is saved as a <b>draft</b> — it reaches the customer only after a manager approves it.</div>
+          <div class="sub" th:if="${editing}">Editing <b th:text="${offer.caseRef}">CRO-0000</b>. Audit fields and the case reference are never changed by an edit.</div>
         </div>
       </div>
 
@@ -112,8 +116,9 @@
       </div>
 
       <div class="form-actions">
-        <a class="btn btn--ghost" th:href="@{/offers}">Cancel</a>
-        <button class="btn btn--primary" type="submit" id="save-offer">Save as draft</button>
+        <a class="btn btn--ghost" th:href="${editing} ? @{/offers/{id}(id=${offer.id})} : @{/offers}">Cancel</a>
+        <button class="btn btn--primary" type="submit" id="save-offer"
+                th:text="${editing} ? 'Save changes' : 'Save as draft'">Save as draft</button>
       </div>
     </div>
   </form>
