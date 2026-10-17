@@ -1,6 +1,8 @@
 package com.crop.retention.service;
 
+import com.crop.retention.model.OfferStatus;
 import com.crop.retention.model.RetentionOffer;
+import com.crop.retention.model.Segment;
 import com.crop.retention.repository.RetentionOfferRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +35,19 @@ public class OfferService {
         return repository.findAll(pageable);
     }
 
+    /**
+     * Combined search. Every criterion is optional and blank values are normalised to
+     * {@code null} so that an empty control simply drops out of the query rather than
+     * matching nothing (US-06 AC2).
+     */
+    @Transactional(readOnly = true)
+    public Page<RetentionOffer> search(String q, OfferStatus status, Segment segment,
+                                       Integer minRisk, Pageable pageable) {
+        String text = (q == null || q.isBlank()) ? null : q.trim();
+        Integer risk = (minRisk == null || minRisk <= 0) ? null : minRisk;
+        return repository.search(text, status, segment, risk, pageable);
+    }
+
     @Transactional(readOnly = true)
     public RetentionOffer require(Long id) {
         return repository.findById(id).orElseThrow(() -> new OfferNotFoundException(id));
@@ -49,6 +64,38 @@ public class OfferService {
         offer.setCreatedBy(username);
         // status defaults to DRAFT on the entity; set explicitly so the intent is visible
         offer.setStatus(com.crop.retention.model.OfferStatus.DRAFT);
+        return repository.save(offer);
+    }
+
+    /**
+     * Applies an edit to an existing offer.
+     *
+     * <p>Only the commercial fields are copied across. The case reference, status and
+     * every audit field are left untouched, so an edit can never be used to rewrite who
+     * approved what (NFR-04).</p>
+     *
+     * @throws OfferNotEditableException when the offer has moved past DRAFT or REJECTED
+     */
+    @Transactional
+    public RetentionOffer update(Long id, RetentionOffer form) {
+        RetentionOffer existing = require(id);
+        if (!existing.isEditable()) {
+            throw new OfferNotEditableException(existing.getCaseRef(), existing.getStatus());
+        }
+        existing.setCustomerName(form.getCustomerName());
+        existing.setCustomerEmail(form.getCustomerEmail());
+        existing.setAccountId(form.getAccountId());
+        existing.setSegment(form.getSegment());
+        existing.setChurnRisk(form.getChurnRisk());
+        existing.setMonthlyValue(form.getMonthlyValue());
+        existing.setOfferType(form.getOfferType());
+        existing.setOfferValue(form.getOfferValue());
+        existing.setNotes(form.getNotes());
+        return repository.save(existing);
+    }
+
+    @Transactional
+    public RetentionOffer save(RetentionOffer offer) {
         return repository.save(offer);
     }
 
@@ -78,6 +125,13 @@ public class OfferService {
     public static class OfferNotFoundException extends RuntimeException {
         public OfferNotFoundException(Long id) {
             super("No retention offer with id " + id);
+        }
+    }
+
+    /** Thrown when an edit is attempted on an offer that has left the editable states. */
+    public static class OfferNotEditableException extends RuntimeException {
+        public OfferNotEditableException(String caseRef, OfferStatus status) {
+            super("%s cannot be edited while it is in status %s".formatted(caseRef, status.getLabel()));
         }
     }
 }

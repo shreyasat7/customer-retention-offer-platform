@@ -1,9 +1,15 @@
 <!doctype html>
 <html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{fragments/layout :: shell(${offer.caseRef}, 'Retention offer detail and audit trail', 'offers', ~{::#actions}, ~{::section})}">
 <body>
 
 <div id="actions">
+  <a sec:authorize="hasRole('AGENT')" th:if="${offer.editable}" class="btn btn--ghost" id="edit-offer"
+     th:href="@{/offers/{id}/edit(id=${offer.id})}" style="margin-right:9px">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>
+    Edit
+  </a>
   <a class="btn btn--ghost" th:href="@{/offers}">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
     Back to offers
@@ -11,6 +17,17 @@
 </div>
 
 <section>
+
+  <div class="alert alert--ok" th:if="${message}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+    <span th:text="${message}">done</span>
+  </div>
+
+  <div class="alert alert--bad" th:if="${error}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12.5"/><circle cx="12" cy="16" r="0.6" fill="currentColor"/></svg>
+    <span><b>Action refused.</b> <span th:text="${error}">reason</span></span>
+  </div>
 
   <div class="alert alert--ok" th:if="${created}">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
@@ -155,11 +172,66 @@
         </div>
       </div>
 
-      <div class="alert alert--info" style="margin-top:18px">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="9"/><line x1="12" y1="16" x2="12" y2="11.5"/><circle cx="12" cy="8" r="0.6" fill="currentColor"/></svg>
-        <span>Workflow actions — submit, approve, reject, send and outcome — arrive with
-          backlog item <b>M7</b> on <code>feature/workflow-search-dashboard</code>.</span>
+      <div class="card" style="margin-top:18px">
+        <div class="card-head">
+          <div><h2>Workflow</h2>
+            <div class="sub">Actions available to you in this state</div></div>
+        </div>
+        <div class="card-body">
+
+          <div th:if="${workflowActions.isEmpty()}" style="color:var(--ink-3);font-size:13.5px">
+            <span th:if="${offer.status.terminal}">
+              This offer has reached a terminal state — the customer has responded and it can no longer move.
+            </span>
+            <span th:unless="${offer.status.terminal}">
+              Nothing for your role to do here. <b th:text="${offer.status.label}">Status</b> is handled by
+              <span th:text="${offer.status.name() == 'PENDING_APPROVAL'} ? 'a manager' : 'an agent'">someone else</span>.
+            </span>
+          </div>
+
+          <div th:unless="${workflowActions.isEmpty()}">
+            <!-- reject carries a mandatory reason, so it gets its own form -->
+            <form th:each="a : ${workflowActions}" th:if="${a.name() != 'REJECT'}"
+                  th:action="@{/offers/{id}/{action}(id=${offer.id}, action=${a.name().toLowerCase()})}"
+                  method="post" style="margin-bottom:9px">
+              <button type="submit" style="width:100%"
+                      th:id="|action-${a.name().toLowerCase()}|"
+                      th:class="|btn ${
+                        a.name() == 'SUBMIT'  ? 'btn--primary' :
+                        a.name() == 'APPROVE' ? 'btn--ok' :
+                        a.name() == 'SEND'    ? 'btn--purple' :
+                        a.name() == 'ACCEPT'  ? 'btn--ok' : 'btn--ghost'}|"
+                      th:text="${a.label}">Action</button>
+            </form>
+
+            <form th:if="${#lists.contains(workflowActions.![name()], 'REJECT')}"
+                  th:action="@{/offers/{id}/reject(id=${offer.id})}" method="post"
+                  style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line-2)">
+              <div class="field" style="margin-bottom:10px">
+                <label for="comment">Decision comment<span class="req">*</span></label>
+                <textarea id="comment" name="comment" style="min-height:70px"
+                          placeholder="Why is this offer being rejected?"></textarea>
+                <div class="hint">Required for a rejection, and kept on the record for Finance and Audit.</div>
+              </div>
+              <button class="btn btn--bad" type="submit" id="action-reject" style="width:100%">Reject</button>
+            </form>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:18px">
+        <div class="card-head"><h2>Where this can go next</h2></div>
+        <div class="card-body" style="font-size:12.8px;color:var(--ink-2);line-height:1.7">
+          <code style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px">
+            DRAFT &rarr; PENDING_APPROVAL &rarr; APPROVED &rarr; SENT &rarr; ACCEPTED | DECLINED
+          </code>
+          <div style="margin-top:9px;color:var(--ink-3)">
+            A manager approves or rejects; only an agent submits, sends and records the outcome.
+            <b>SENT is reachable only from APPROVED</b> — no offer can reach a customer without a
+            recorded approval.
+          </div>
+        </div>
       </div>
     </div>
   </div>
