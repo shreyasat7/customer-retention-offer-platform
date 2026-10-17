@@ -6,10 +6,12 @@
       jenkins-cli create-job crop-ci-build < jenkins/crop-ci-build.config.xml
 -->
 <project>
-  <description>&lt;b&gt;Continuous integration build&lt;/b&gt; for the Customer Retention Offer Platform.&lt;br/&gt;
-Polls &lt;code&gt;develop&lt;/code&gt; every two minutes, runs &lt;code&gt;mvn clean package&lt;/code&gt; on JDK 17,
-publishes the JUnit results and archives &lt;code&gt;crop.war&lt;/code&gt;.&lt;br/&gt;
-Backlog item &lt;b&gt;M11&lt;/b&gt; / issue #11.</description>
+  <description>Continuous integration build for the Customer Retention Offer Platform.
+
+Polls the develop branch every two minutes, runs 'mvn clean package' on JDK 17,
+publishes the JUnit results and archives crop.war as a build artefact.
+
+Backlog item M11 / issue #11.</description>
   <keepDependencies>false</keepDependencies>
   <properties>
     <jenkins.model.BuildDiscarderProperty>
