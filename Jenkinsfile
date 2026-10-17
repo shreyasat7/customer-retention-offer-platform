@@ -32,6 +32,9 @@ pipeline {
         string(name: 'APP_CONTEXT',
                defaultValue: 'crop',
                description: 'Context path the application is deployed under')
+        string(name: 'SELENIUM_PORT',
+               defaultValue: '8095',
+               description: 'Port the throwaway instance under Selenium listens on')
         booleanParam(name: 'SKIP_DEPLOY',
                defaultValue: false,
                description: 'Build and test only — do not touch the server')
@@ -54,6 +57,8 @@ pipeline {
         TOMCAT_HOME = "${params.TOMCAT_HOME ?: '/opt/homebrew/opt/tomcat/libexec'}"
         DEPLOY_PORT = "${params.DEPLOY_PORT ?: '9090'}"
         APP_CONTEXT = "${params.APP_CONTEXT ?: 'crop'}"
+
+        SELENIUM_PORT = "${params.SELENIUM_PORT ?: '8095'}"
 
         DEPLOY_URL = "http://localhost:${params.DEPLOY_PORT ?: '9090'}/${params.APP_CONTEXT ?: 'crop'}"
         HEALTH_URL = "http://localhost:${params.DEPLOY_PORT ?: '9090'}/${params.APP_CONTEXT ?: 'crop'}/actuator/health"
@@ -100,6 +105,49 @@ pipeline {
             post {
                 success {
                     archiveArtifacts artifacts: "${env.ARTIFACT}", fingerprint: true
+                }
+            }
+        }
+
+        // ---------------------------------------------------------------------
+        //  THE QUALITY GATE
+        //
+        //  `mvn verify` starts a throwaway instance on :8095, drives the five
+        //  Selenium journeys against it in headless Chrome, and stops it again.
+        //  It re-runs the unit tests as part of the standard lifecycle, which
+        //  costs well under a second and keeps the command boringly ordinary.
+        //
+        //  If this stage fails the build is FAILURE and every stage below it is
+        //  skipped - the deploy never happens. That is success criterion SC8.
+        // ---------------------------------------------------------------------
+        stage('Selenium regression gate') {
+            steps {
+                sh """
+                    mvn -B verify \
+                        -Dselenium.headless=true \
+                        -Dselenium.port=${SELENIUM_PORT}
+                """
+            }
+            post {
+                always {
+                    junit testResults: 'target/failsafe-reports/*.xml', allowEmptyResults: true
+
+                    // the HTML report, published so a reviewer can read the run
+                    sh 'mvn -B surefire-report:failsafe-report-only || true'
+                    publishHTML(target: [
+                        reportDir            : 'target/reports',
+                        reportFiles          : 'failsafe.html',
+                        reportName           : 'Selenium regression report',
+                        keepAll              : true,
+                        alwaysLinkToLastBuild: true,
+                        allowMissing         : true
+                    ])
+                }
+                failure {
+                    // a failing UI test is useless without a picture of the page
+                    archiveArtifacts artifacts: 'target/selenium-screenshots/*.png',
+                                     allowEmptyArchive: true
+                    echo 'Selenium gate FAILED - the deploy stage will not run.'
                 }
             }
         }
@@ -153,7 +201,10 @@ pipeline {
             echo "SUCCESS — ${env.GIT_SHA} deployed to ${env.DEPLOY_URL}"
         }
         failure {
-            echo "FAILURE — ${env.GIT_SHA} was not deployed"
+            echo "FAILURE — ${env.GIT_SHA} was NOT deployed. The running server is untouched."
+        }
+        unstable {
+            echo "UNSTABLE — ${env.GIT_SHA} was NOT deployed"
         }
         always {
             echo "Build #${env.BUILD_NUMBER} finished with status ${currentBuild.currentResult}"
