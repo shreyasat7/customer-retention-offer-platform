@@ -38,6 +38,21 @@ pipeline {
         booleanParam(name: 'SKIP_DEPLOY',
                defaultValue: false,
                description: 'Build and test only — do not touch the server')
+        string(name: 'DOCKER_REGISTRY',
+               defaultValue: 'localhost:5001',
+               description: 'Registry the versioned image is published to')
+        string(name: 'IMAGE_NAME',
+               defaultValue: 'crop',
+               description: 'Image repository name inside the registry')
+        string(name: 'CONTAINER_NAME',
+               defaultValue: 'crop-app',
+               description: 'Name of the deployed application container')
+        string(name: 'CONTAINER_PORT',
+               defaultValue: '8090',
+               description: 'Host port the deployed container publishes on')
+        booleanParam(name: 'SKIP_DOCKER',
+               defaultValue: false,
+               description: 'Skip the image build, registry push and container deploy')
     }
 
     options {
@@ -49,6 +64,20 @@ pipeline {
 
     environment {
         ARTIFACT = 'target/crop.war'
+
+        // launchd starts Jenkins with a minimal PATH, so the Docker CLI
+        // (/usr/local/bin/docker, a symlink into Docker.app) is not on it.
+        PATH = "/usr/local/bin:/opt/homebrew/bin:${env.PATH}"
+
+        DOCKER_REGISTRY = "${params.DOCKER_REGISTRY ?: 'localhost:5001'}"
+        IMAGE_NAME      = "${params.IMAGE_NAME ?: 'crop'}"
+        CONTAINER_NAME  = "${params.CONTAINER_NAME ?: 'crop-app'}"
+        CONTAINER_PORT  = "${params.CONTAINER_PORT ?: '8090'}"
+
+        // The build number is the version. It is monotonic, unique and traceable
+        // straight back to the Jenkins run that produced the image.
+        IMAGE_TAG       = "${params.DOCKER_REGISTRY ?: 'localhost:5001'}/${params.IMAGE_NAME ?: 'crop'}:${env.BUILD_NUMBER}"
+        IMAGE_LATEST    = "${params.DOCKER_REGISTRY ?: 'localhost:5001'}/${params.IMAGE_NAME ?: 'crop'}:latest"
 
         // Parameters only exist from the second build onward - the first run of a
         // parameterised job is what *defines* them. Resolving each one here with the
@@ -194,11 +223,112 @@ pipeline {
                 '''
             }
         }
+
+        // =====================================================================
+        //  CONTAINER DELIVERY
+        //  Only reachable once the Selenium gate has passed, so an image is
+        //  never built from a revision that failed its tests.
+        // =====================================================================
+
+        stage('Build Docker image') {
+            when { expression { return !(params.SKIP_DOCKER ?: false) } }
+            steps {
+                sh '''
+                    set -eu
+                    docker build -t "${IMAGE_TAG}" -t "${IMAGE_LATEST}" .
+                    docker image inspect "${IMAGE_TAG}" \
+                        --format 'built {{.Id}}  {{.Os}}/{{.Architecture}}  {{.Size}} bytes'
+                '''
+            }
+        }
+
+        stage('Publish to registry') {
+            when { expression { return !(params.SKIP_DOCKER ?: false) } }
+            steps {
+                sh '''
+                    set -eu
+                    docker push "${IMAGE_TAG}"
+                    docker push "${IMAGE_LATEST}"
+
+                    echo "--- registry catalog ---"
+                    curl -s "http://${DOCKER_REGISTRY}/v2/_catalog"
+                    echo
+                    echo "--- tags for ${IMAGE_NAME} ---"
+                    curl -s "http://${DOCKER_REGISTRY}/v2/${IMAGE_NAME}/tags/list"
+                    echo
+                '''
+            }
+        }
+
+        stage('Deploy container') {
+            when { expression { return !(params.SKIP_DOCKER ?: false) } }
+            steps {
+                sh '''
+                    set -eu
+
+                    echo "Replacing ${CONTAINER_NAME} with ${IMAGE_TAG}"
+
+                    # pull from the registry rather than reusing the local build, so the
+                    # deploy exercises the artefact that was actually published
+                    docker pull "${IMAGE_TAG}"
+
+                    docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+
+                    # the named volume is NOT removed: the container is disposable,
+                    # the data is not
+                    docker run -d \
+                        --name "${CONTAINER_NAME}" \
+                        -p "${CONTAINER_PORT}:8080" \
+                        -v crop-data:/app/data \
+                        --restart unless-stopped \
+                        --label "crop.build=${BUILD_NUMBER}" \
+                        --label "crop.commit=${GIT_SHA}" \
+                        "${IMAGE_TAG}"
+
+                    docker ps --filter "name=${CONTAINER_NAME}" \
+                        --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
+                '''
+            }
+        }
+
+        stage('Container health check') {
+            when { expression { return !(params.SKIP_DOCKER ?: false) } }
+            steps {
+                sh '''
+                    set -eu
+                    URL="http://localhost:${CONTAINER_PORT}/actuator/health"
+                    echo "Waiting for ${URL}"
+
+                    for attempt in $(seq 1 40); do
+                        state=$(docker inspect "${CONTAINER_NAME}" \
+                                --format '{{.State.Health.Status}}' 2>/dev/null || echo unknown)
+                        status=$(curl -s -o /tmp/chealth.json -w "%{http_code}" "${URL}" || true)
+
+                        if [ "$status" = "200" ] && grep -q '"status":"UP"' /tmp/chealth.json; then
+                            echo "Container healthy after $((attempt * 3))s (docker reports: ${state})"
+                            cat /tmp/chealth.json; echo
+                            exit 0
+                        fi
+                        sleep 3
+                    done
+
+                    echo "Container never became healthy"
+                    docker logs --tail 80 "${CONTAINER_NAME}" || true
+                    exit 1
+                '''
+            }
+            post {
+                failure {
+                    echo 'Container health check FAILED - see Task 14 for the rollback procedure.'
+                }
+            }
+        }
     }
 
     post {
         success {
             echo "SUCCESS — ${env.GIT_SHA} deployed to ${env.DEPLOY_URL}"
+            echo "         container ${env.CONTAINER_NAME} running ${env.IMAGE_TAG} on http://localhost:${env.CONTAINER_PORT}"
         }
         failure {
             echo "FAILURE — ${env.GIT_SHA} was NOT deployed. The running server is untouched."
