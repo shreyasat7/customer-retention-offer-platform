@@ -216,21 +216,37 @@ gh api -X PUT repos/shreyasat7/customer-retention-offer-platform/branches/main/p
 |---|---|
 | Require a pull request before merging | **enabled** |
 | Dismiss stale reviews on new commits | **enabled** |
+| Apply the rules to administrators (`enforce_admins`) | **enabled** |
 | Allow force pushes | **disabled** |
 | Allow branch deletion | **disabled** |
 
-Verified:
+`enforce_admins` was switched on in a second call, because without it GitHub lets the
+repository owner bypass the rule — the first push to `main` printed the warning but still
+succeeded:
+
+```bash
+gh api -X POST repos/shreyasat7/customer-retention-offer-platform/branches/main/protection/enforce_admins
+```
+
+### Proof that the policy is actually enforced
+
+With admin enforcement on, a direct push to `main` is refused:
 
 ```
-$ gh api repos/shreyasat7/customer-retention-offer-platform/branches/main/protection
-required_pull_request_reviews: enabled
-allow_force_pushes: False
-allow_deletions: False
+$ git checkout main
+$ git commit -m "test: direct push to main (should be refused by branch protection)"
+$ git push origin main
+remote: error: GH006: Protected branch update failed for refs/heads/main.
+remote:
+remote: - Changes must be made through a pull request.
+To https://github.com/shreyasat7/customer-retention-offer-platform.git
+ ! [remote rejected] main -> main (protected branch hook declined)
+error: failed to push some refs to '…/customer-retention-offer-platform.git'
 ```
 
-> `enforce_admins` is left off deliberately: this is a single-developer project and the
-> owner must still be able to administer the repository. The rule that matters —
-> *no direct push of code to `main`* — is in force.
+The test commit was discarded with `git reset --hard origin/main`. From this point on,
+**every change reaches `main` only through a pull request from `develop`** — which is how
+the release merge and the `v1.0.0` tag are produced in Task 6.
 
 ### Commit message convention
 
@@ -257,7 +273,7 @@ Subject is imperative, lower case, no trailing full stop, ≤ 72 characters.
 | Issue templates | `.github/ISSUE_TEMPLATE/` — three templates plus a PR template |
 | Initial commits | `docs/screenshots/task-04-commits.png`, `docs/logs/task-04-git-init.log` |
 | Issues | `docs/screenshots/task-04-github-issues.png` — 15 open issues with labels |
-| Branch policy | §7, `CONTRIBUTING.md`, README, and live branch protection on `main` |
+| Branch policy | §7, `CONTRIBUTING.md`, README, live branch protection on `main`, and the refused direct push in `docs/logs/task-04-branch-protection.log` |
 
 ---
 
@@ -272,4 +288,4 @@ Subject is imperative, lower case, no trailing full stop, ≤ 72 characters.
 - [x] Initial application skeleton committed with meaningful messages (6 commits) — §5
 - [x] Issues raised (15) — §6
 - [x] Branch policy documented **and enforced** — §7
-- [x] Evidence screenshots — `task-04-github-repo.png`, `task-04-github-issues.png`, `task-04-commits.png`, `task-04-git-log.png`
+- [x] Evidence screenshots — `task-04-github-repo.png`, `task-04-github-issues.png`, `task-04-commits.png`, `task-04-git-log.png`, `task-04-branch-protection.png`
