@@ -1,47 +1,159 @@
 <!doctype html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{fragments/layout :: shell('Dashboard', 'Retention performance overview', 'dashboard', ~{}, ~{::section})}">
+      th:replace="~{fragments/layout :: shell('Dashboard', 'Retention performance at a glance', 'dashboard', ~{::#actions}, ~{::section})}">
 <body>
+
+<div id="actions">
+  <a class="btn btn--ghost" th:href="@{/offers(status='PENDING_APPROVAL')}">Review approvals</a>
+  <a class="btn btn--primary" th:href="@{/offers}" style="margin-left:9px">All offers</a>
+</div>
+
 <section>
 
-  <div class="alert alert--info">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="9"/><line x1="12" y1="16" x2="12" y2="11.5"/><circle cx="12" cy="8" r="0.6" fill="currentColor"/></svg>
-    <span><b>Sprint 1 skeleton.</b> Authentication, the domain model and the application shell are in place.
-      Offer management and the KPI dashboard land in Sprint 2 (backlog items M2–M9).</span>
+  <!-- ---------------------------------------------------------- KPI tiles -->
+  <div class="grid g4" style="margin-bottom:18px">
+    <div class="kpi">
+      <div class="label">Total offers</div>
+      <div class="value" th:text="${s.totalOffers}">0</div>
+      <div class="foot">across all seven workflow states</div>
+    </div>
+    <div class="kpi warn">
+      <div class="label">Awaiting approval</div>
+      <div class="value" th:text="${s.awaitingApproval}">0</div>
+      <div class="foot">needs a manager decision</div>
+    </div>
+    <div class="kpi ok">
+      <div class="label">Acceptance rate</div>
+      <div class="value" th:text="|${s.acceptanceRate}%|">0%</div>
+      <div class="foot">of <b th:text="${s.decidedOffers}">0</b> offers the customer answered</div>
+    </div>
+    <div class="kpi purple">
+      <div class="label">Monthly revenue retained</div>
+      <div class="value" th:text="|&#8377;${#numbers.formatInteger(s.retainedMonthlyValue, 1, 'COMMA')}|">0</div>
+      <div class="foot">net of the cost of accepted offers</div>
+    </div>
   </div>
 
-  <div class="grid g2">
+  <div class="grid g-2-1" style="margin-bottom:18px">
+
+    <!-- ------------------------------------------------------ status funnel -->
     <div class="card">
-      <div class="card-head"><h2>Runtime status</h2></div>
+      <div class="card-head">
+        <div><h2>Status funnel</h2>
+          <div class="sub">Where every offer currently sits</div></div>
+      </div>
       <div class="card-body">
-        <dl class="dl">
-          <dt>Application</dt><dd th:text="${appName}">CROP</dd>
-          <dt>Version</dt><dd><span class="tag" th:text="${appVersion}">1.0.0</span></dd>
-          <dt>Signed in as</dt><dd th:text="${#authentication.name}">user</dd>
-          <dt>Granted roles</dt>
-          <dd th:text="${#strings.replace(#strings.arrayJoin(#authentication.authorities,', '),'ROLE_','')}">ROLE</dd>
-          <dt>Java runtime</dt><dd th:text="${javaVersion}">17</dd>
-          <dt>Server port</dt><dd th:text="${serverPort}">8070</dd>
-          <dt>Database</dt><dd th:text="${database}">H2</dd>
-          <dt>Health endpoint</dt><dd><a th:href="@{/actuator/health}">/actuator/health</a></dd>
-        </dl>
+        <div class="funnel-row" th:each="e : ${s.byStatus}">
+          <span class="nm" th:text="${e.key.label}">Draft</span>
+          <span class="track">
+            <i th:style="|width:${e.value * 100 / s.maxStatusCount}%;background:${
+                 e.key.name() == 'DRAFT'            ? '#94a3b8' :
+                 e.key.name() == 'PENDING_APPROVAL' ? '#f59e0b' :
+                 e.key.name() == 'APPROVED'         ? '#0ea5e9' :
+                 e.key.name() == 'REJECTED'         ? '#ef4444' :
+                 e.key.name() == 'SENT'             ? '#8b5cf6' :
+                 e.key.name() == 'ACCEPTED'         ? '#10b981' : '#cbd5e1'}|"></i>
+          </span>
+          <span class="ct" th:text="${e.value}">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------------- risk bands -->
+    <div class="card">
+      <div class="card-head">
+        <div><h2>Churn risk</h2><div class="sub">Breakdown of the book</div></div>
+      </div>
+      <div class="card-body">
+        <svg viewBox="0 0 200 200" style="width:160px;height:160px;display:block;margin:0 auto 18px">
+          <g th:with="c1=${s.riskBands[0].percent}, c2=${s.riskBands[1].percent},
+                      c3=${s.riskBands[2].percent}, c4=${s.riskBands[3].percent}">
+            <circle cx="100" cy="100" r="70" fill="none" stroke="#f1f5f9" stroke-width="30"/>
+            <circle cx="100" cy="100" r="70" fill="none" stroke="#ef4444" stroke-width="30"
+                    th:attr="stroke-dasharray=|${c1 * 4.398} 440|" transform="rotate(-90 100 100)"/>
+            <circle cx="100" cy="100" r="70" fill="none" stroke="#f59e0b" stroke-width="30"
+                    th:attr="stroke-dasharray=|${c2 * 4.398} 440|,stroke-dashoffset=|-${c1 * 4.398}|"
+                    transform="rotate(-90 100 100)"/>
+            <circle cx="100" cy="100" r="70" fill="none" stroke="#0ea5e9" stroke-width="30"
+                    th:attr="stroke-dasharray=|${c3 * 4.398} 440|,stroke-dashoffset=|-${(c1 + c2) * 4.398}|"
+                    transform="rotate(-90 100 100)"/>
+            <circle cx="100" cy="100" r="70" fill="none" stroke="#10b981" stroke-width="30"
+                    th:attr="stroke-dasharray=|${c4 * 4.398} 440|,stroke-dashoffset=|-${(c1 + c2 + c3) * 4.398}|"
+                    transform="rotate(-90 100 100)"/>
+          </g>
+          <text x="100" y="96" text-anchor="middle" font-size="30" font-weight="750" fill="#0f172a"
+                th:text="${s.totalOffers}">0</text>
+          <text x="100" y="116" text-anchor="middle" font-size="11" fill="#64748b"
+                letter-spacing="1">OFFERS</text>
+        </svg>
+        <div class="legend">
+          <div class="row" th:each="b : ${s.riskBands}">
+            <span class="sw" th:style="|background:${
+                b.cssClass == 'critical' ? '#ef4444' :
+                b.cssClass == 'high'     ? '#f59e0b' :
+                b.cssClass == 'medium'   ? '#0ea5e9' : '#10b981'}|"></span>
+            <span class="nm" th:text="${b.name}">Band</span>
+            <span class="v" th:text="${b.count}">0</span>
+            <span style="color:var(--ink-3);font-size:12px;width:38px;text-align:right"
+                  th:text="|${b.percent}%|">0%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ------------------------------------------------------ needs attention -->
+  <div class="grid g-2-1">
+    <div class="card">
+      <div class="card-head">
+        <div><h2>Needs attention</h2>
+          <div class="sub">Oldest offers still waiting on a manager decision</div></div>
+        <div class="spacer"></div>
+        <a class="btn btn--ghost btn--sm" th:href="@{/offers(status='PENDING_APPROVAL')}">See all</a>
+      </div>
+      <div class="card-body tight">
+        <div th:if="${s.oldestWaiting.isEmpty()}" style="padding:26px 0;text-align:center;color:var(--ink-3);font-size:13.5px">
+          Nothing is waiting for approval.
+        </div>
+        <div class="attn" th:each="w : ${s.oldestWaiting}">
+          <div class="age">
+            <b th:text="${w.daysWaiting}" th:style="${w.daysWaiting >= 3} ? 'color:var(--bad)' : 'color:var(--ink)'">0</b>
+            <span th:text="${w.daysWaiting == 1} ? 'day' : 'days'">days</span>
+          </div>
+          <div class="info">
+            <b><a th:href="@{/offers/{id}(id=${w.id})}" th:text="${w.customerName}">Customer</a></b>
+            <span>
+              <span class="ref" th:text="${w.caseRef}">CRO-0000</span> &middot;
+              <span th:text="${w.segment}">Segment</span>
+            </span>
+          </div>
+          <span class="risk" th:classappend="${w.riskCssClass}">
+            <span class="bar"><i th:style="|width:${w.churnRisk}%|"></i></span>
+            <span th:text="${w.churnRisk}">0</span>
+          </span>
+          <a class="btn btn--ghost btn--sm" th:href="@{/offers/{id}(id=${w.id})}">Open</a>
+        </div>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-head"><h2>MVP roadmap</h2><div class="spacer"></div>
-        <span class="tag">15 backlog items</span></div>
+      <div class="card-head"><h2>Pipeline value</h2></div>
       <div class="card-body">
-        <div class="timeline">
-          <div class="tl-item done"><div class="t">M1 · Role-based login and logout</div>
-            <div class="m">Delivered — Spring Security, three roles</div></div>
-          <div class="tl-item done"><div class="t">Domain model and persistence</div>
-            <div class="m">Delivered — RetentionOffer entity, 7-state workflow enum, H2</div></div>
-          <div class="tl-item wait"><div class="t">M2–M4 · Create and view offers</div>
-            <div class="m">Sprint 1, feature/create-view-offer</div></div>
-          <div class="tl-item wait"><div class="t">M5–M9 · Edit, search, workflow, dashboard</div>
-            <div class="m">Sprint 2, feature/workflow-search-dashboard</div></div>
+        <div style="margin-bottom:20px">
+          <div class="stat-l" style="font-size:11.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--ink-3);font-weight:700">Monthly value in flight</div>
+          <div style="font-size:27px;font-weight:750;letter-spacing:-.9px;margin-top:5px;color:var(--warn)"
+               th:text="|&#8377;${#numbers.formatInteger(s.valueAtRisk, 1, 'COMMA')}|">0</div>
+          <div style="font-size:12.5px;color:var(--ink-3);margin-top:4px">
+            Revenue attached to offers that have not yet reached a terminal state.
+          </div>
+        </div>
+        <div>
+          <div class="stat-l" style="font-size:11.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--ink-3);font-weight:700">Secured so far</div>
+          <div style="font-size:27px;font-weight:750;letter-spacing:-.9px;margin-top:5px;color:var(--ok)"
+               th:text="|&#8377;${#numbers.formatInteger(s.retainedMonthlyValue, 1, 'COMMA')}|">0</div>
+          <div style="font-size:12.5px;color:var(--ink-3);margin-top:4px">
+            Monthly revenue retained by offers the customer accepted, net of the incentive.
+          </div>
         </div>
       </div>
     </div>
