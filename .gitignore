@@ -1,0 +1,33 @@
+# ----------------------------------------------------------------- build
+target/
+*.war
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# ------------------------------------------------------------- application
+data/
+*.mv.db
+*.trace.db
+logs/
+*.log
+
+# -------------------------------------------------------------------- IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+nbproject/
+
+# ------------------------------------------------------------------- OS
+.DS_Store
+Thumbs.db
+
+# ---------------------------------------------------- local-only artefacts
+.local/
+.evidence-venv/
+/screenshots-tmp/
+test-output/
