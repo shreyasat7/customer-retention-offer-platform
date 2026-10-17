@@ -23,6 +23,14 @@ public class OfferController {
 
     private static final int PAGE_SIZE = 10;
 
+    /**
+     * Default ordering for the offer list. The list is the agent's work queue, so the
+     * customers most likely to churn come first and recent activity is only the
+     * tie-breaker (issue #17).
+     */
+    private static final Sort HIGHEST_RISK_FIRST =
+            Sort.by(Sort.Order.desc("churnRisk"), Sort.Order.desc("updatedAt"));
+
     private final OfferService offers;
 
     public OfferController(OfferService offers) {
@@ -45,7 +53,7 @@ public class OfferController {
     @GetMapping
     public String list(@RequestParam(defaultValue = "0") int page, Model model) {
         Page<RetentionOffer> results = offers.list(
-                PageRequest.of(Math.max(page, 0), PAGE_SIZE, Sort.by(Sort.Direction.DESC, "updatedAt")));
+                PageRequest.of(Math.max(page, 0), PAGE_SIZE, HIGHEST_RISK_FIRST));
         model.addAttribute("results", results);
         return "offers/list";
     }

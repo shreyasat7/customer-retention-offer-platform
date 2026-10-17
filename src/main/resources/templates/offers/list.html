@@ -25,6 +25,7 @@
         <div class="sub">
           <span th:text="${results.totalElements}">0</span> record<span th:if="${results.totalElements != 1}">s</span>
           &middot; page <span th:text="${results.number + 1}">1</span> of <span th:text="${results.totalPages &gt; 0 ? results.totalPages : 1}">1</span>
+          &middot; highest churn risk first
         </div>
       </div>
     </div>
