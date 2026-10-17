@@ -53,8 +53,7 @@
         </tr>
         </thead>
         <tbody>
-        <tr th:each="o : ${results.content}"
-            th:onclick="|window.location='@{/offers/{id}(id=${o.id})}'|" style="cursor:pointer">
+        <tr th:each="o : ${results.content}">
           <td><a class="ref" th:href="@{/offers/{id}(id=${o.id})}" th:text="${o.caseRef}">CRO-0001</a></td>
           <td class="cust">
             <b th:text="${o.customerName}">Name</b>
@@ -68,7 +67,7 @@
             </span>
           </td>
           <td>
-            <span th:text="${#numbers.formatDecimal(o.offerValue, 1, 'COMMA', 0, 'POINT')}">0</span><span th:text="${o.offerType.unit}">%</span>
+            <span style="font-weight:600" th:text="${o.offerType.format(o.offerValue)}">20%</span>
             <div style="font-size:11.5px;color:var(--ink-3)" th:text="${o.offerType.label}">Discount</div>
           </td>
           <td class="num" th:text="|&#8377;${#numbers.formatDecimal(o.monthlyValue, 1, 'COMMA', 0, 'POINT')}|">0</td>

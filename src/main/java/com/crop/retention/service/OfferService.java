@@ -54,8 +54,14 @@ public class OfferService {
 
     /**
      * Produces the next free {@code CRO-####} reference. The counter starts from the
-     * number of existing rows and skips forward on collision, which is sufficient for a
-     * single-instance deployment and avoids a separate sequence table.
+     * number of existing rows and skips forward on collision.
+     *
+     * <p><strong>Constraint:</strong> this is safe within one JVM only. Two application
+     * instances sharing the same H2 file would each hold their own counter and could
+     * collide, leaving this loop to spin until one of them wins. The deployment is a
+     * single container or a single Tomcat instance, so a database sequence would be
+     * over-engineering for the MVP — but the limitation is real and is recorded here
+     * rather than left to be discovered later.</p>
      */
     private String nextCaseRef() {
         if (caseSequence.get() == 0) {
