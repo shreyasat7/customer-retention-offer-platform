@@ -43,7 +43,8 @@ public class RetentionOffer {
     private String customerEmail;
 
     @NotBlank(message = "Account ID is required")
-    @Pattern(regexp = "[A-Za-z0-9-]{4,24}", message = "Account ID must be 4-24 letters, digits or hyphens")
+    // the empty alternative keeps @NotBlank the only message shown on a blank field
+    @Pattern(regexp = "^$|[A-Za-z0-9-]{4,24}", message = "Account ID must be 4-24 letters, digits or hyphens")
     @Column(nullable = false, length = 24)
     private String accountId;
 

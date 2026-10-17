@@ -11,13 +11,15 @@
 </div>
 
 <section>
-  <div class="alert alert--bad" th:if="${#fields.hasAnyErrors()}">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12.5"/><circle cx="12" cy="16" r="0.6" fill="currentColor"/></svg>
-    <span><b>This offer was not saved.</b> Correct the highlighted fields and submit again.</span>
-  </div>
-
   <form th:action="@{/offers}" th:object="${offer}" method="post" novalidate>
+
+    <!-- #fields resolves against the enclosing th:object, so the validation summary
+         must live inside the form, not above it. -->
+    <div class="alert alert--bad" th:if="${#fields.hasAnyErrors()}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12.5"/><circle cx="12" cy="16" r="0.6" fill="currentColor"/></svg>
+      <span><b>This offer was not saved.</b> Correct the highlighted fields and submit again.</span>
+    </div>
     <div class="card" style="max-width:920px">
       <div class="card-head">
         <div>
