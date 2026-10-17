@@ -1,0 +1,159 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CROP — Project Charter &amp; Frozen MVP Scope</title>
+<link rel="stylesheet" href="evidence.css"></head><body>
+<div class="sheet">
+
+<div class="doc-head">
+  <div>
+    <h1>Automated Customer Retention Offer Platform — Project Charter</h1>
+    <div class="sub">Task 1 deliverable &middot; Problem definition, stakeholders, objectives, constraints and approved MVP scope</div>
+  </div>
+  <div style="text-align:right">
+    <span class="badge ok">Scope frozen</span>
+    <div class="sub" style="margin-top:7px">17 Oct 2026 &middot; Shreya Sathish</div>
+  </div>
+</div>
+
+<div class="grid g4" style="margin-bottom:16px">
+  <div class="card"><div class="stat-l">Annual churn, subscription sector</div><div class="stat">15–30%</div></div>
+  <div class="card"><div class="stat-l">Acquire vs retain cost</div><div class="stat">5–7×</div></div>
+  <div class="card"><div class="stat-l">Frozen MVP backlog items</div><div class="stat" style="color:var(--brand)">15</div></div>
+  <div class="card"><div class="stat-l">Measurable success criteria</div><div class="stat" style="color:var(--ok)">11</div></div>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <h2><span class="n">1</span>Problem statement</h2>
+  <div class="quote">Retention offers are created, approved and tracked across disconnected spreadsheets and
+  email threads. There is <strong>no enforced approval workflow</strong>, <strong>no shared record of an offer's state</strong>,
+  and <strong>no reliable measurement</strong> of which offers retain customers. Discount margin leaks, duplicate offers
+  reach the same customer, approved offers are never sent, and management has no trustworthy view of retention
+  performance. <strong>CROP</strong> provides a role-based web application in which every offer moves through an enforced
+  status workflow, is searchable by the whole team, and is aggregated into a live dashboard — built, tested,
+  containerised and deployed by an automated DevOps pipeline.</div>
+</div>
+
+<div class="grid g2" style="margin-bottom:16px">
+  <div class="card">
+    <h2><span class="n">2</span>Target users &amp; stakeholders</h2>
+    <table>
+      <tr><th>Stakeholder</th><th>Stake</th><th>Influence</th></tr>
+      <tr><td><strong>Retention Agent</strong><div class="mono-note">primary user</div></td><td>Raise, send and close offers faster than Excel</td><td><span class="pill bad">High</span></td></tr>
+      <tr><td><strong>Retention Manager</strong><div class="mono-note">primary user</div></td><td>Control discount spend via approval authority</td><td><span class="pill bad">High</span></td></tr>
+      <tr><td><strong>Administrator</strong><div class="mono-note">primary user</div></td><td>Operate platform, verify audit trail</td><td><span class="pill bad">High</span></td></tr>
+      <tr><td>Head of Retention</td><td>Project sponsor — lower churn, provable save rate</td><td><span class="pill bad">High</span></td></tr>
+      <tr><td>IT / DevOps team</td><td>Owns the automated delivery pipeline</td><td><span class="pill bad">High</span></td></tr>
+      <tr><td>Finance Controller</td><td>Accurate discount cost &amp; retained revenue</td><td><span class="pill warn">Medium</span></td></tr>
+      <tr><td>Compliance &amp; Audit</td><td>Immutable who-approved-what record</td><td><span class="pill warn">Medium</span></td></tr>
+      <tr><td>Data / Analytics team</td><td>Supplies the churn-risk score</td><td><span class="pill warn">Medium</span></td></tr>
+      <tr><td>Customers</td><td>Receive a fair, timely offer</td><td><span class="pill ok">Indirect</span></td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h2><span class="n">3</span>Pain points in the current manual process</h2>
+    <table>
+      <tr><th>ID</th><th>Pain point</th><th>Severity</th></tr>
+      <tr><td class="k">P1</td><td>No enforced approval before a discount reaches a customer</td><td><span class="pill bad">Critical</span></td></tr>
+      <tr><td class="k">P2</td><td>Offer data lives in per-agent spreadsheets</td><td><span class="pill bad">Critical</span></td></tr>
+      <tr><td class="k">P3</td><td>Offer status unknown — approved? sent?</td><td><span class="pill warn">High</span></td></tr>
+      <tr><td class="k">P4</td><td>Customer outcome not linked back to the offer</td><td><span class="pill warn">High</span></td></tr>
+      <tr><td class="k">P5</td><td>No cross-team search → duplicate offers</td><td><span class="pill warn">High</span></td></tr>
+      <tr><td class="k">P6</td><td>No aggregated KPIs for management</td><td><span class="pill ok">Medium</span></td></tr>
+      <tr><td class="k">P7</td><td>Deploying any internal tool takes days of manual work</td><td><span class="pill ok">Medium</span></td></tr>
+    </table>
+    <h2 style="margin-top:16px"><span class="n">4</span>Constraints</h2>
+    <ul class="tight">
+      <li><strong>C1</strong> Single developer, ~2 weeks → scope frozen at 15 items, no microservices</li>
+      <li><strong>C2</strong> Must run entirely on one macOS laptop → no cloud spend</li>
+      <li><strong>C3</strong> Prescribed toolchain must be demonstrable → Maven + WAR + Tomcat</li>
+      <li><strong>C4</strong> No DB licence → embedded H2 file database</li>
+      <li><strong>C5</strong> No real customer data → synthetic seed data only</li>
+      <li><strong>C6</strong> No email gateway → "send" transitions status, does not email</li>
+      <li><strong>C7</strong> Live 20-minute viva → every tool needs a visible interface</li>
+    </ul>
+  </div>
+</div>
+
+<div class="grid g2" style="margin-bottom:16px">
+  <div class="card">
+    <h2><span class="n">5</span>Objectives</h2>
+    <table>
+      <tr><th>ID</th><th>Business objective</th></tr>
+      <tr><td class="k">B1</td><td>Enforce manager approval on every offer before it reaches a customer</td></tr>
+      <tr><td class="k">B2</td><td>One searchable system of record for all retention offers</td></tr>
+      <tr><td class="k">B3</td><td>Measure acceptance rate and retained revenue automatically</td></tr>
+      <tr><td class="k">B4</td><td>Complete audit trail of create / approve / send actions</td></tr>
+    </table>
+    <table style="margin-top:12px">
+      <tr><th>ID</th><th>DevOps objective</th></tr>
+      <tr><td class="k">T1</td><td>Version control with branching policy and reviewed pull requests</td></tr>
+      <tr><td class="k">T2</td><td>Commit-triggered automated Maven build (CI)</td></tr>
+      <tr><td class="k">T3</td><td>Selenium regression suite that blocks a bad deployment</td></tr>
+      <tr><td class="k">T4</td><td>Containerised, versioned, registry-published image</td></tr>
+      <tr><td class="k">T5</td><td>Repeatable idempotent provisioning via configuration management</td></tr>
+      <tr><td class="k">T6</td><td>Demonstrable rollback to the previous stable release</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h2><span class="n">6</span>Measurable success criteria</h2>
+    <table>
+      <tr><th>ID</th><th>Criterion</th><th>Target</th></tr>
+      <tr><td class="k">SC1</td><td>Offers reaching a customer without approval</td><td><span class="pill ok">0</span></td></tr>
+      <tr><td class="k">SC2</td><td>Time to create + submit an offer</td><td><span class="pill ok">&lt; 60 s</span></td></tr>
+      <tr><td class="k">SC3</td><td>Offers findable by name / email / case ref</td><td><span class="pill ok">100%</span></td></tr>
+      <tr><td class="k">SC4</td><td>Dashboard KPIs available on login</td><td><span class="pill ok">&lt; 2 s</span></td></tr>
+      <tr><td class="k">SC5</td><td>Records carrying full audit fields</td><td><span class="pill ok">100%</span></td></tr>
+      <tr><td class="k">SC6</td><td>Commit → artefact without human steps</td><td><span class="pill brand">100% auto</span></td></tr>
+      <tr><td class="k">SC7</td><td>Pipeline duration build→test→deploy</td><td><span class="pill brand">&lt; 6 min</span></td></tr>
+      <tr><td class="k">SC8</td><td>Failing Selenium test blocks deployment</td><td><span class="pill brand">Always</span></td></tr>
+      <tr><td class="k">SC9</td><td>Re-running Ansible playbook</td><td><span class="pill brand">changed=0</span></td></tr>
+      <tr><td class="k">SC10</td><td>Rollback to previous image</td><td><span class="pill brand">&lt; 2 min</span></td></tr>
+      <tr><td class="k">SC11</td><td>Critical journeys under automated test</td><td><span class="pill brand">&ge; 4</span></td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="n">7</span>Approved MVP scope — frozen at 15 backlog items</h2>
+  <div class="grid g2">
+    <div>
+      <div class="stat-l" style="margin-bottom:6px">Application scope</div>
+      <div class="scope-item"><span class="id">M1</span><span class="txt">Role-based login / logout — Agent, Manager, Admin</span></div>
+      <div class="scope-item"><span class="id">M2</span><span class="txt"><strong>Create</strong> a retention offer record</span></div>
+      <div class="scope-item"><span class="id">M3</span><span class="txt"><strong>View</strong> paginated offer list</span></div>
+      <div class="scope-item"><span class="id">M4</span><span class="txt"><strong>View</strong> offer detail page with audit trail</span></div>
+      <div class="scope-item"><span class="id">M5</span><span class="txt"><strong>Update</strong> / edit an offer while in Draft</span></div>
+      <div class="scope-item"><span class="id">M6</span><span class="txt"><strong>Search &amp; filter</strong> — text, status, segment, risk</span></div>
+      <div class="scope-item"><span class="id">M7</span><span class="txt">Role-based <strong>status workflow</strong> with enforced transitions</span></div>
+      <div class="scope-item"><span class="id">M8</span><span class="txt">Manager approve / reject with decision comment</span></div>
+      <div class="scope-item"><span class="id">M9</span><span class="txt"><strong>Summary dashboard</strong> — KPIs, funnel, risk breakdown</span></div>
+    </div>
+    <div>
+      <div class="stat-l" style="margin-bottom:6px">DevOps scope</div>
+      <div class="scope-item"><span class="id dev">M10</span><span class="txt">Git repo, branch policy, reviewed PRs, release tag</span></div>
+      <div class="scope-item"><span class="id dev">M11</span><span class="txt">Jenkins CI job — commit-triggered Maven build, archived artefact</span></div>
+      <div class="scope-item"><span class="id dev">M12</span><span class="txt">Declarative <span class="k">Jenkinsfile</span> deploying the WAR to Tomcat</span></div>
+      <div class="scope-item"><span class="id dev">M13</span><span class="txt">Selenium suite integrated as a deployment gate</span></div>
+      <div class="scope-item"><span class="id dev">M14</span><span class="txt">Dockerfile, versioned image, registry publication, auto-deployed container</span></div>
+      <div class="scope-item"><span class="id dev">M15</span><span class="txt">Ansible playbook — idempotency, health check, rollback</span></div>
+      <div style="margin-top:14px;padding:12px 14px;background:var(--ok-soft);border:1px solid #a7f3d0;border-radius:10px">
+        <div class="stat-l" style="color:var(--ok)">Definition of MVP done</div>
+        <div style="font-size:13px;color:var(--ink-2);margin-top:4px">All 15 items complete &middot; Selenium green in Jenkins &middot;
+        versioned image in registry &middot; container auto-deployed on commit &middot; Ansible idempotent on re-run &middot;
+        rollback demonstrated.</div>
+      </div>
+      <div style="margin-top:12px;padding:12px 14px;background:var(--bad-soft);border:1px solid #fecaca;border-radius:10px">
+        <div class="stat-l" style="color:var(--bad)">Out of scope</div>
+        <div style="font-size:13px;color:var(--ink-2);margin-top:4px">ML churn prediction &middot; real email/SMS delivery &middot;
+        CRM &amp; billing integration &middot; customer self-service portal &middot; multi-tenancy / multi-currency &middot;
+        Kubernetes &middot; SSO/LDAP &middot; mobile app.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  <span>Automated Customer Retention Offer Platform &middot; DevOps mini-project</span>
+  <span>Task 1 of 14 &middot; docs/TASK-01-problem-definition-and-scope.md</span>
+</div>
+</div></body></html>

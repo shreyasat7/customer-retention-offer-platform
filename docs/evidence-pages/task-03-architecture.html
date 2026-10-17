@@ -1,0 +1,337 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>CROP — Architecture, Use Cases &amp; Data Model</title>
+<link rel="stylesheet" href="evidence.css">
+<style>
+.layer{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:7px;background:#fff}
+.layer .lh{flex:0 0 150px;background:var(--ink);color:#fff;padding:11px 14px;font-size:11.5px;font-weight:750;
+  letter-spacing:.7px;display:flex;align-items:center}
+.layer .lb{flex:1;padding:10px 15px;font-size:13px;color:var(--ink-2)}
+.layer .lb code{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--brand-600);font-weight:650}
+.layer.sec .lh{background:var(--bad)} .layer.svc .lh{background:var(--purple)}
+.layer.db .lh{background:var(--ok)} .layer.pres .lh{background:var(--brand)}
+.erd{font-family:ui-monospace,Menlo,monospace;font-size:11.8px;line-height:1.65}
+.erd .grp{background:#f1f5f9;color:var(--ink-3);padding:2px 8px;border-radius:5px;font-weight:700;
+  font-size:10.5px;letter-spacing:.6px;display:inline-block;margin:9px 0 4px}
+.erd .col{display:grid;grid-template-columns:22px 170px 120px 1fr;gap:6px;padding:1.5px 0}
+.erd .pk{color:#b45309;font-weight:800}.erd .uq{color:var(--purple);font-weight:800}
+.erd .nm{color:var(--ink);font-weight:650}.erd .ty{color:var(--brand-600)}
+.erd .ct{color:var(--ink-3)}
+.dep{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;align-items:stretch}
+.dep .node{border:1px solid var(--line);border-radius:10px;padding:11px 12px;background:#fff;text-align:center}
+.dep .node .p{font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:750;color:#fff;
+  background:var(--ink);border-radius:5px;padding:1px 7px;display:inline-block;margin-bottom:6px}
+.dep .node b{display:block;font-size:12.5px;margin-bottom:3px}
+.dep .node span{display:block;font-size:11.5px;color:var(--ink-3);line-height:1.4}
+.dep .node.j{border-color:#bfdbfe;background:#eff6ff}.dep .node.j .p{background:var(--brand)}
+.dep .node.d{border-color:#ddd6fe;background:#f5f3ff}.dep .node.d .p{background:var(--purple)}
+.dep .node.o{border-color:#a7f3d0;background:#ecfdf5}.dep .node.o .p{background:var(--ok)}
+</style></head><body>
+<div class="sheet">
+
+<div class="doc-head">
+  <div><h1>Requirements, Architecture &amp; Technology Setup</h1>
+  <div class="sub">Task 3 deliverable &middot; SRS summary &middot; use-case model &middot; architecture &middot; data model &middot; API list</div></div>
+  <div style="text-align:right"><span class="badge brand">Layered monolith</span>
+  <div class="sub" style="margin-top:7px">18 functional &middot; 10 non-functional requirements</div></div>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <h2><span class="n">1</span>Use-case model</h2>
+<svg viewBox="0 0 1420 650" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
+  <!-- system boundary -->
+  <rect x="250" y="36" width="960" height="574" rx="14" fill="#fbfcfe" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="0"/>
+  <text x="730" y="26" font-size="12" font-weight="750" fill="#475569" text-anchor="middle" letter-spacing="1.1">CUSTOMER RETENTION OFFER PLATFORM</text>
+
+  <!-- group: agent-only -->
+  <rect x="268" y="62" width="452" height="330" rx="11" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.4"/>
+  <text x="280" y="82" font-size="10.5" font-weight="750" fill="#1d4ed8" letter-spacing=".9">AGENT USE CASES</text>
+  <g fill="#fff" stroke="#2563eb" stroke-width="1.5">
+    <ellipse cx="494" cy="118" rx="200" ry="22"/><ellipse cx="494" cy="170" rx="200" ry="22"/>
+    <ellipse cx="494" cy="222" rx="200" ry="22"/><ellipse cx="494" cy="274" rx="200" ry="22"/>
+    <ellipse cx="494" cy="326" rx="200" ry="22"/><ellipse cx="494" cy="370" rx="200" ry="19"/>
+  </g>
+  <g font-size="12.5" fill="#0f172a" text-anchor="middle">
+    <text x="494" y="122">UC2 &middot; Create retention offer</text>
+    <text x="494" y="174">UC6 &middot; Edit draft offer</text>
+    <text x="494" y="226">UC7 &middot; Submit offer for approval</text>
+    <text x="494" y="278">UC10 &middot; Revise rejected offer</text>
+    <text x="494" y="330">UC11 &middot; Send approved offer</text>
+    <text x="494" y="374">UC12 &middot; Record customer outcome</text>
+  </g>
+
+  <!-- group: manager-only -->
+  <rect x="740" y="62" width="452" height="196" rx="11" fill="#f5f3ff" stroke="#ddd6fe" stroke-width="1.4"/>
+  <text x="752" y="82" font-size="10.5" font-weight="750" fill="#6d28d9" letter-spacing=".9">MANAGER USE CASES</text>
+  <g fill="#fff" stroke="#6d28d9" stroke-width="1.5">
+    <ellipse cx="966" cy="118" rx="200" ry="22"/><ellipse cx="966" cy="172" rx="200" ry="22"/>
+    <ellipse cx="966" cy="226" rx="200" ry="22"/>
+  </g>
+  <g font-size="12.5" fill="#0f172a" text-anchor="middle">
+    <text x="966" y="122">UC8 &middot; Approve offer</text>
+    <text x="966" y="176">UC9 &middot; Reject offer</text>
+    <text x="966" y="230">UC8a &middot; Record decision comment</text>
+  </g>
+  <path d="M966 194 V204" stroke="#6d28d9" stroke-width="1.3" stroke-dasharray="4 3"/>
+  <text x="1030" y="203" font-size="10" fill="#6d28d9" font-style="italic">&#171;include&#187;</text>
+  <path d="M900 140 C870 160 880 190 900 204" stroke="#6d28d9" stroke-width="1.3" stroke-dasharray="4 3" fill="none"/>
+  <text x="812" y="178" font-size="10" fill="#6d28d9" font-style="italic">&#171;extend&#187;</text>
+
+  <!-- group: operations -->
+  <rect x="740" y="276" width="452" height="116" rx="11" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1.4"/>
+  <text x="752" y="296" font-size="10.5" font-weight="750" fill="#047857" letter-spacing=".9">OPERATIONS USE CASES</text>
+  <g fill="#fff" stroke="#047857" stroke-width="1.5">
+    <ellipse cx="966" cy="332" rx="200" ry="22"/><ellipse cx="966" cy="374" rx="200" ry="18"/>
+  </g>
+  <g font-size="12.5" fill="#0f172a" text-anchor="middle">
+    <text x="966" y="336">UC14 &middot; Probe application health</text>
+    <text x="966" y="378">UC15 &middot; Read build / version info</text>
+  </g>
+
+  <!-- group: shared -->
+  <rect x="268" y="410" width="924" height="184" rx="11" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.4"/>
+  <text x="280" y="430" font-size="10.5" font-weight="750" fill="#475569" letter-spacing=".9">SHARED — AGENT, MANAGER AND ADMINISTRATOR</text>
+  <g fill="#fff" stroke="#475569" stroke-width="1.5">
+    <ellipse cx="420" cy="472" rx="134" ry="22"/><ellipse cx="724" cy="472" rx="134" ry="22"/>
+    <ellipse cx="1028" cy="472" rx="134" ry="22"/>
+    <ellipse cx="572" cy="542" rx="134" ry="22"/><ellipse cx="876" cy="542" rx="134" ry="22"/>
+  </g>
+  <g font-size="12" fill="#0f172a" text-anchor="middle">
+    <text x="420" y="476">UC1 &middot; Sign in / sign out</text>
+    <text x="724" y="476">UC3 &middot; View offer list</text>
+    <text x="1028" y="476">UC4 &middot; Search and filter</text>
+    <text x="572" y="546">UC5 &middot; View offer detail</text>
+    <text x="876" y="546">UC13 &middot; View dashboard</text>
+  </g>
+
+  <!-- actors -->
+  <g stroke="#2563eb" stroke-width="2" fill="none">
+    <circle cx="122" cy="186" r="15" fill="#fff"/><line x1="122" y1="201" x2="122" y2="238"/>
+    <line x1="99" y1="214" x2="145" y2="214"/><line x1="122" y1="238" x2="104" y2="266"/><line x1="122" y1="238" x2="140" y2="266"/>
+  </g>
+  <text x="122" y="288" font-size="12.5" font-weight="700" fill="#1d4ed8" text-anchor="middle">Retention Agent</text>
+
+  <g stroke="#6d28d9" stroke-width="2" fill="none">
+    <circle cx="1320" cy="120" r="15" fill="#fff"/><line x1="1320" y1="135" x2="1320" y2="172"/>
+    <line x1="1297" y1="148" x2="1343" y2="148"/><line x1="1320" y1="172" x2="1302" y2="200"/><line x1="1320" y1="172" x2="1338" y2="200"/>
+  </g>
+  <text x="1320" y="222" font-size="12.5" font-weight="700" fill="#6d28d9" text-anchor="middle">Retention Manager</text>
+
+  <g stroke="#334155" stroke-width="2" fill="none">
+    <circle cx="122" cy="470" r="15" fill="#fff"/><line x1="122" y1="485" x2="122" y2="522"/>
+    <line x1="99" y1="498" x2="145" y2="498"/><line x1="122" y1="522" x2="104" y2="550"/><line x1="122" y1="522" x2="140" y2="550"/>
+  </g>
+  <text x="122" y="572" font-size="12.5" font-weight="700" fill="#334155" text-anchor="middle">Administrator</text>
+  <text x="122" y="588" font-size="10" fill="#64748b" text-anchor="middle">(all agent + manager</text>
+  <text x="122" y="601" font-size="10" fill="#64748b" text-anchor="middle">use cases)</text>
+
+  <rect x="1262" y="320" width="118" height="54" rx="8" fill="#fff" stroke="#047857" stroke-width="2"/>
+  <text x="1321" y="342" font-size="11.5" font-weight="700" fill="#047857" text-anchor="middle">Jenkins /</text>
+  <text x="1321" y="358" font-size="11.5" font-weight="700" fill="#047857" text-anchor="middle">Ansible</text>
+  <text x="1321" y="390" font-size="9.5" fill="#64748b" text-anchor="middle" font-style="italic">&#171;system actor&#187;</text>
+
+  <!-- associations -->
+  <g stroke="#2563eb" stroke-width="1.5">
+    <line x1="145" y1="214" x2="268" y2="214"/>
+    <line x1="140" y1="252" x2="268" y2="466"/>
+  </g>
+  <g stroke="#6d28d9" stroke-width="1.5">
+    <line x1="1297" y1="148" x2="1192" y2="148"/>
+    <line x1="1302" y1="190" x2="1192" y2="470"/>
+  </g>
+  <line x1="145" y1="498" x2="268" y2="498" stroke="#334155" stroke-width="1.5"/>
+  <line x1="1262" y1="347" x2="1192" y2="347" stroke="#047857" stroke-width="1.5"/>
+</svg>
+</div>
+
+<div class="grid g2" style="margin-bottom:16px">
+  <div class="card">
+    <h2><span class="n">2</span>Layered application architecture</h2>
+    <div class="layer pres"><div class="lh">PRESENTATION</div><div class="lb">
+      Thymeleaf templates + <code>app.css</code> — <code>layout.html</code>, login, offers list / form / detail, dashboard.
+      No JS framework, no CDN asset (NFR-06).</div></div>
+    <div class="layer"><div class="lh">WEB</div><div class="lb">
+      Spring MVC controllers — <code>OfferController</code>, <code>DashboardController</code>,
+      <code>LoginController</code>, <code>GlobalModelAdvice</code>, <code>GlobalExceptionHandler</code>.</div></div>
+    <div class="layer sec"><div class="lh">SECURITY</div><div class="lb">
+      Spring Security filter chain — form login, BCrypt hashes, CSRF tokens,
+      <code>ROLE_AGENT</code> / <code>ROLE_MANAGER</code> / <code>ROLE_ADMIN</code>.</div></div>
+    <div class="layer svc"><div class="lh">SERVICE</div><div class="lb">
+      <code>OfferService</code> (use cases) and <code>OfferWorkflow</code> (state rules) —
+      <strong>the only place a status transition may be decided</strong>.</div></div>
+    <div class="layer"><div class="lh">PERSISTENCE</div><div class="lb">
+      Spring Data JPA — <code>RetentionOfferRepository</code> with the combined search query.</div></div>
+    <div class="layer db"><div class="lh">DATABASE</div><div class="lb">
+      H2 file database at <code>./data/retention.mv.db</code> — survives container restarts,
+      which the Task 14 rollback demo relies on.</div></div>
+    <div style="margin-top:12px;padding:11px 14px;background:var(--warn-soft);border:1px solid var(--warn-line);border-radius:9px;font-size:12.8px;color:#92400e">
+      <strong>Key architectural rule.</strong> A controller never changes a status directly — it calls
+      <code>OfferWorkflow</code>. That single choke point is what makes success criterion SC1
+      ("zero offers sent without approval") testable without a browser.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">3</span>Data model — RETENTION_OFFER</h2>
+    <div class="erd">
+      <span class="grp">IDENTITY</span>
+      <div class="col"><span class="pk">PK</span><span class="nm">id</span><span class="ty">BIGINT</span><span class="ct">identity</span></div>
+      <div class="col"><span class="uq">UQ</span><span class="nm">case_ref</span><span class="ty">VARCHAR(16)</span><span class="ct">CRO-0001 …</span></div>
+      <span class="grp">CUSTOMER</span>
+      <div class="col"><span></span><span class="nm">customer_name</span><span class="ty">VARCHAR(120)</span><span class="ct">NOT NULL</span></div>
+      <div class="col"><span></span><span class="nm">customer_email</span><span class="ty">VARCHAR(160)</span><span class="ct">NOT NULL, @Email</span></div>
+      <div class="col"><span></span><span class="nm">account_id</span><span class="ty">VARCHAR(24)</span><span class="ct">[A-Za-z0-9-]{4,24}</span></div>
+      <div class="col"><span></span><span class="nm">segment</span><span class="ty">VARCHAR(20)</span><span class="ct">enum Segment</span></div>
+      <div class="col"><span></span><span class="nm">churn_risk</span><span class="ty">INTEGER</span><span class="ct">0 … 100</span></div>
+      <div class="col"><span></span><span class="nm">monthly_value</span><span class="ty">DECIMAL(11,2)</span><span class="ct">&gt; 0</span></div>
+      <span class="grp">OFFER</span>
+      <div class="col"><span></span><span class="nm">offer_type</span><span class="ty">VARCHAR(24)</span><span class="ct">enum OfferType</span></div>
+      <div class="col"><span></span><span class="nm">offer_value</span><span class="ty">DECIMAL(11,2)</span><span class="ct">&gt; 0</span></div>
+      <div class="col"><span></span><span class="nm">notes</span><span class="ty">VARCHAR(1000)</span><span class="ct"></span></div>
+      <span class="grp">WORKFLOW</span>
+      <div class="col"><span></span><span class="nm">status</span><span class="ty">VARCHAR(24)</span><span class="ct">enum OfferStatus</span></div>
+      <span class="grp">AUDIT — immutable once written (NFR-04)</span>
+      <div class="col"><span></span><span class="nm">created_by / _at</span><span class="ty">VARCHAR / TS</span><span class="ct">NOT NULL</span></div>
+      <div class="col"><span></span><span class="nm">submitted_by / _at</span><span class="ty">VARCHAR / TS</span><span class="ct"></span></div>
+      <div class="col"><span></span><span class="nm">decision_by / _at</span><span class="ty">VARCHAR / TS</span><span class="ct"></span></div>
+      <div class="col"><span></span><span class="nm">decision_comment</span><span class="ty">VARCHAR(500)</span><span class="ct"></span></div>
+      <div class="col"><span></span><span class="nm">sent_by / _at</span><span class="ty">VARCHAR / TS</span><span class="ct"></span></div>
+      <div class="col"><span></span><span class="nm">updated_at, outcome_at</span><span class="ty">TIMESTAMP</span><span class="ct"></span></div>
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:var(--ink-3);font-family:ui-monospace,Menlo,monospace">
+      INDEX idx_offer_status (status) &middot; INDEX idx_offer_customer (customer_name)
+    </div>
+    <div style="margin-top:10px;font-size:12.5px;color:var(--ink-2)">
+      <strong>Derived, not stored:</strong> <span class="k">riskBand</span> (Low &lt;40 · Medium 40–59 · High 60–79 · Critical ≥80),
+      <span class="k">retainedMonthlyValue</span> (monthly value less the amortised monthly cost of the incentive),
+      <span class="k">editable</span> (status ∈ DRAFT, REJECTED).
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <h2><span class="n">4</span>Status workflow — enforced state machine</h2>
+<svg viewBox="0 0 1320 290" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
+  <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+    <path d="M0 0 L10 5 L0 10 z" fill="#475569"/></marker></defs>
+
+  <rect x="40" y="86" width="176" height="52" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.8"/>
+  <text x="128" y="110" font-size="13.5" font-weight="700" fill="#334155" text-anchor="middle">DRAFT</text>
+  <text x="128" y="127" font-size="10.5" fill="#64748b" text-anchor="middle">editable</text>
+
+  <rect x="296" y="86" width="196" height="52" rx="10" fill="#fffbeb" stroke="#fde68a" stroke-width="1.8"/>
+  <text x="394" y="110" font-size="13.5" font-weight="700" fill="#b45309" text-anchor="middle">PENDING_APPROVAL</text>
+  <text x="394" y="127" font-size="10.5" fill="#92400e" text-anchor="middle">awaiting manager</text>
+
+  <rect x="572" y="86" width="176" height="52" rx="10" fill="#f0f9ff" stroke="#bae6fd" stroke-width="1.8"/>
+  <text x="660" y="110" font-size="13.5" font-weight="700" fill="#0369a1" text-anchor="middle">APPROVED</text>
+  <text x="660" y="127" font-size="10.5" fill="#075985" text-anchor="middle">cleared to send</text>
+
+  <rect x="828" y="86" width="176" height="52" rx="10" fill="#f5f3ff" stroke="#ddd6fe" stroke-width="1.8"/>
+  <text x="916" y="110" font-size="13.5" font-weight="700" fill="#6d28d9" text-anchor="middle">SENT</text>
+  <text x="916" y="127" font-size="10.5" fill="#5b21b6" text-anchor="middle">with the customer</text>
+
+  <rect x="1084" y="26" width="196" height="50" rx="10" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1.8"/>
+  <text x="1182" y="48" font-size="13.5" font-weight="700" fill="#047857" text-anchor="middle">ACCEPTED</text>
+  <text x="1182" y="64" font-size="10.5" fill="#065f46" text-anchor="middle">terminal &middot; revenue retained</text>
+
+  <rect x="1084" y="148" width="196" height="50" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.8"/>
+  <text x="1182" y="170" font-size="13.5" font-weight="700" fill="#64748b" text-anchor="middle">DECLINED</text>
+  <text x="1182" y="186" font-size="10.5" fill="#64748b" text-anchor="middle">terminal &middot; customer churns</text>
+
+  <rect x="296" y="214" width="196" height="50" rx="10" fill="#fef2f2" stroke="#fecaca" stroke-width="1.8"/>
+  <text x="394" y="236" font-size="13.5" font-weight="700" fill="#b91c1c" text-anchor="middle">REJECTED</text>
+  <text x="394" y="252" font-size="10.5" fill="#991b1b" text-anchor="middle">comment required</text>
+
+  <g stroke="#475569" stroke-width="2" marker-end="url(#a2)" fill="none">
+    <line x1="216" y1="112" x2="288" y2="112"/>
+    <line x1="492" y1="112" x2="564" y2="112"/>
+    <line x1="748" y1="112" x2="820" y2="112"/>
+    <path d="M1004 100 C1040 90 1050 70 1076 56"/>
+    <path d="M1004 124 C1040 134 1050 154 1076 168"/>
+    <path d="M394 138 V206"/>
+    <path d="M296 239 C200 239 128 210 128 146"/>
+  </g>
+  <g font-size="11" font-weight="700" fill="#334155" text-anchor="middle">
+    <text x="252" y="104">submit</text><text x="252" y="92" font-size="9.5" fill="#1d4ed8">AGENT</text>
+    <text x="528" y="104">approve</text><text x="528" y="92" font-size="9.5" fill="#6d28d9">MANAGER</text>
+    <text x="784" y="104">send</text><text x="784" y="92" font-size="9.5" fill="#1d4ed8">AGENT</text>
+    <text x="1046" y="78">accepted</text>
+    <text x="1046" y="148">declined</text>
+    <text x="440" y="178">reject</text><text x="440" y="166" font-size="9.5" fill="#6d28d9">MANAGER</text>
+    <text x="196" y="196">revise</text><text x="196" y="184" font-size="9.5" fill="#1d4ed8">AGENT</text>
+  </g>
+  <rect x="572" y="212" width="432" height="56" rx="9" fill="#fef2f2" stroke="#fecaca"/>
+  <text x="588" y="234" font-size="11.8" font-weight="750" fill="#b91c1c">Every other transition is refused.</text>
+  <text x="588" y="252" font-size="11.5" fill="#991b1b">SENT is reachable only from APPROVED — objective B1, criterion SC1.</text>
+</svg>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <h2><span class="n">5</span>Deployment architecture &amp; port map</h2>
+  <div class="dep">
+    <div class="node"><span class="p">git</span><b>Developer</b><span>feature branch → PR → develop</span></div>
+    <div class="node"><span class="p">github</span><b>GitHub</b><span>origin, issues, pull requests, tag v1.0.0</span></div>
+    <div class="node j"><span class="p">:8080</span><b>Jenkins LTS</b><span>SCM poll → build → test gate → deploy</span></div>
+    <div class="node d"><span class="p">:5001</span><b>Docker registry</b><span>crop:&lt;build&gt;, crop:latest &middot; UI on :5002</span></div>
+    <div class="node o"><span class="p">ansible</span><b>Provisioning</b><span>packages, dirs, services, health, rollback</span></div>
+  </div>
+  <div style="text-align:center;color:var(--ink-3);font-size:18px;margin:8px 0">&#8595;</div>
+  <div class="dep" style="grid-template-columns:repeat(4,1fr)">
+    <div class="node"><span class="p">:9090</span><b>Apache Tomcat 11</b><span>webapps/crop.war &middot; deployed by the pipeline</span></div>
+    <div class="node d"><span class="p">:8090</span><b>App container</b><span>java -jar crop.war inside the image</span></div>
+    <div class="node o"><span class="p">:8081</span><b>Nginx</b><span>reverse proxy in front of the container</span></div>
+    <div class="node"><span class="p">:8070</span><b>Local dev</b><span>mvn spring-boot:run &middot; :8095 under test</span></div>
+  </div>
+</div>
+
+<div class="grid g2">
+  <div class="card">
+    <h2><span class="n">6</span>Technology selection &amp; rationale</h2>
+    <table>
+      <tr><th>Concern</th><th>Choice</th><th>Why</th></tr>
+      <tr><td>Runtime</td><td><strong>Java 17 LTS</strong></td><td>Matches the prescribed toolchain; <span class="k">JAVA_HOME</span> pinned because the host's <span class="k">mvn</span> defaults to JDK 27</td></tr>
+      <tr><td>Framework</td><td><strong>Spring Boot 3.5.6</strong></td><td>Web, security, JPA, validation and health in one dependency set</td></tr>
+      <tr><td>UI</td><td><strong>Thymeleaf + own CSS</strong></td><td>Server-rendered HTML is far more stable under Selenium than a SPA; no second build chain</td></tr>
+      <tr><td>Build tool</td><td><strong>Maven 3.10</strong></td><td>One scriptable command for Jenkins; Surefire/Failsafe split separates unit tests from Selenium</td></tr>
+      <tr><td>Packaging</td><td><strong>WAR — crop.war</strong></td><td>One artefact serves both targets: executable for Docker, deployable for Tomcat</td></tr>
+      <tr><td>Database</td><td><strong>H2, file mode</strong></td><td>No licence (C4); file mode survives restarts, which the rollback demo needs</td></tr>
+      <tr><td>Server</td><td><strong>Tomcat 11</strong></td><td>Prescribed; WAR drop into <span class="k">webapps/</span> is easy to show live</td></tr>
+      <tr><td>CI/CD</td><td><strong>Jenkins LTS</strong></td><td>Prescribed; declarative <span class="k">Jenkinsfile</span> versions the pipeline with the code</td></tr>
+      <tr><td>UI testing</td><td><strong>Selenium + headless Chrome</strong></td><td>Same suite runs locally and in Jenkins</td></tr>
+      <tr><td>Registry</td><td><strong>registry:2 + web UI</strong></td><td>Real push/pull and a browsable catalog with no cloud account</td></tr>
+      <tr><td>Config mgmt</td><td><strong>Ansible</strong></td><td>Agentless YAML against localhost as the target node — no VM needed (C2)</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h2><span class="n">7</span>API / endpoint list</h2>
+    <table>
+      <tr><th>Method</th><th>Path</th><th>Role</th></tr>
+      <tr><td><span class="pill brand">GET</span></td><td class="k">/login</td><td>public</td></tr>
+      <tr><td><span class="pill ok">POST</span></td><td class="k">/login &middot; /logout</td><td>public / auth</td></tr>
+      <tr><td><span class="pill brand">GET</span></td><td class="k">/dashboard</td><td>authenticated</td></tr>
+      <tr><td><span class="pill brand">GET</span></td><td class="k">/offers</td><td>authenticated</td></tr>
+      <tr><td><span class="pill brand">GET</span></td><td class="k">/offers/new</td><td>AGENT</td></tr>
+      <tr><td><span class="pill ok">POST</span></td><td class="k">/offers</td><td>AGENT</td></tr>
+      <tr><td><span class="pill brand">GET</span></td><td class="k">/offers/{id}</td><td>authenticated</td></tr>
+      <tr><td><span class="pill brand">GET</span></td><td class="k">/offers/{id}/edit</td><td>AGENT</td></tr>
+      <tr><td><span class="pill ok">POST</span></td><td class="k">/offers/{id}</td><td>AGENT</td></tr>
+      <tr><td><span class="pill ok">POST</span></td><td class="k">/offers/{id}/submit</td><td>AGENT</td></tr>
+      <tr><td><span class="pill purple">POST</span></td><td class="k">/offers/{id}/approve</td><td>MANAGER</td></tr>
+      <tr><td><span class="pill purple">POST</span></td><td class="k">/offers/{id}/reject</td><td>MANAGER</td></tr>
+      <tr><td><span class="pill ok">POST</span></td><td class="k">/offers/{id}/revise</td><td>AGENT</td></tr>
+      <tr><td><span class="pill ok">POST</span></td><td class="k">/offers/{id}/send</td><td>AGENT</td></tr>
+      <tr><td><span class="pill ok">POST</span></td><td class="k">/offers/{id}/outcome</td><td>AGENT</td></tr>
+      <tr><td><span class="pill brand">GET</span></td><td class="k">/actuator/health</td><td>public probe</td></tr>
+      <tr><td><span class="pill brand">GET</span></td><td class="k">/actuator/info</td><td>public</td></tr>
+    </table>
+    <div style="margin-top:10px;font-size:12.5px;color:var(--ink-2)">
+      <strong>Query parameters on</strong> <span class="k">GET /offers</span>:
+      <span class="k">q</span> (text), <span class="k">status</span>, <span class="k">segment</span>,
+      <span class="k">minRisk</span>, <span class="k">page</span>, <span class="k">size</span> — all optional and combinable (AND).
+    </div>
+  </div>
+</div>
+
+<div class="foot"><span>Automated Customer Retention Offer Platform &middot; DevOps mini-project</span>
+<span>Task 3 of 14 &middot; docs/TASK-03-requirements-architecture-and-setup.md</span></div>
+</div></body></html>
