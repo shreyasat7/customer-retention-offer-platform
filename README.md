@@ -155,6 +155,16 @@ APP_PORT=8070 java -jar target/crop.war
 
 ---
 
+## Demonstration
+
+```bash
+./scripts/demo-up.sh       # start Docker, Jenkins, Tomcat, registry, container and nginx
+./scripts/demo-status.sh   # one-screen status of every service
+./scripts/demo-down.sh     # stop everything (nothing is deleted)
+```
+
+A full walkthrough of all 14 tasks is in **[docs/DEMO-RUNBOOK.md](docs/DEMO-RUNBOOK.md)**.
+
 ## Documentation
 
 Each project task has its own document and screenshot evidence under [`docs/`](docs/).
