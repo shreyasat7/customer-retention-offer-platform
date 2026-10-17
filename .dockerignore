@@ -1,0 +1,4 @@
+# Only the built WAR is needed in the build context. Excluding everything else
+# keeps the context small and stops source changes from busting the build cache.
+*
+!target/crop.war
