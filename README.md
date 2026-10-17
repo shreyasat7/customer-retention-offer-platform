@@ -103,6 +103,7 @@ APP_PORT=8070 java -jar target/crop.war
 | 8081 | Nginx reverse proxy |
 | 5001 | Local Docker registry |
 | 5002 | Docker registry web interface |
+| 8092 | Dozzle — Docker web interface |
 
 ---
 
@@ -153,6 +154,16 @@ APP_PORT=8070 java -jar target/crop.war
 6. `main` is tagged on every release with a semantic version.
 
 ---
+
+## Demonstration
+
+```bash
+./scripts/demo-up.sh       # start Docker, Jenkins, Tomcat, registry, container and nginx
+./scripts/demo-status.sh   # one-screen status of every service
+./scripts/demo-down.sh     # stop everything (nothing is deleted)
+```
+
+A full walkthrough of all 14 tasks is in **[docs/DEMO-RUNBOOK.md](docs/DEMO-RUNBOOK.md)**.
 
 ## Documentation
 

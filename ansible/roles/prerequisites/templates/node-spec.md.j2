@@ -1,0 +1,47 @@
+# Node configuration specification — {{ inventory_hostname }}
+
+{{ ansible_managed | comment(decoration='') }}
+**Do not edit by hand** — change `group_vars/all.yml` and re-run the playbook.
+
+A render timestamp is deliberately absent: it would change on every run and the
+task would report `changed` forever, which destroys the idempotency signal.
+
+| | |
+|---|---|
+| Node | `{{ inventory_hostname }}` ({{ ansible_facts['system'] }}) |
+| Role | {{ node_role }} |
+| Environment | {{ node_environment }} |
+| Owner | {{ crop_owner }} |
+
+## Packages
+{% for pkg in crop_required_packages %}
+- `{{ pkg }}`
+{% endfor %}
+
+## Directories
+- `{{ crop_base_dir }}`
+- `{{ crop_config_dir }}`
+- `{{ crop_logs_dir }}`
+- `{{ crop_releases_dir }}`
+
+## Files
+- `{{ crop_config_dir }}/crop.env`
+- `{{ crop_config_dir }}/node-spec.md` (this file)
+{% if crop_proxy_enabled %}
+- `{{ crop_nginx_servers_dir }}/crop.conf`
+{% endif %}
+
+## Ports
+{% for p in crop_required_ports %}
+- **{{ p.port }}** — {{ p.purpose }}
+{% endfor %}
+
+## Services
+- Docker Engine (container runtime)
+- `{{ crop_container_name }}` container, image `{{ crop_image }}`
+{% if crop_proxy_enabled %}
+- nginx reverse proxy on {{ crop_proxy_port }}
+{% endif %}
+
+## Health
+- `http://localhost:{{ crop_container_port }}{{ crop_health_path }}`

@@ -1,0 +1,74 @@
+---
+# ===========================================================================
+#  Return the node to a clean state, so provisioning can be demonstrated from
+#  nothing rather than against a half-configured machine.
+#
+#      ansible-playbook teardown.yml -e confirm=yes
+#      ansible-playbook teardown.yml -e confirm=yes -e wipe_data=true
+#
+#  The data volume is kept unless wipe_data is explicitly set: removing a
+#  database should never be something a playbook does by accident.
+# ===========================================================================
+
+- name: Tear down the CROP application node
+  hosts: crop_app
+  gather_facts: false
+
+  vars:
+    confirm: "no"
+    wipe_data: false
+
+  pre_tasks:
+    - name: Require explicit confirmation
+      ansible.builtin.assert:
+        that:
+          - confirm | string | lower in ['yes', 'true']
+        fail_msg: "Refusing to tear down. Re-run with -e confirm=yes"
+        success_msg: "Tearing down {{ inventory_hostname }}"
+
+  tasks:
+    - name: Remove the application container
+      community.docker.docker_container:
+        name: "{{ crop_container_name }}"
+        docker_host: "{{ crop_docker_host }}"
+        state: absent
+        force_kill: true
+
+    - name: Remove the reverse-proxy server block
+      ansible.builtin.file:
+        path: "{{ crop_nginx_servers_dir }}/crop.conf"
+        state: absent
+
+    - name: Stop nginx
+      ansible.builtin.shell: |
+        set -eu
+        if /opt/homebrew/bin/brew services list | grep -E '^nginx\s+started' >/dev/null 2>&1; then
+          /opt/homebrew/bin/brew services stop nginx >/dev/null
+          echo STOPPED
+        else
+          echo ALREADY_STOPPED
+        fi
+      register: nginx_stop
+      changed_when: "'STOPPED' == nginx_stop.stdout | trim"
+
+    - name: Remove the platform directory tree
+      ansible.builtin.file:
+        path: "{{ crop_base_dir }}"
+        state: absent
+
+    - name: Remove the data volume
+      community.docker.docker_volume:
+        name: "{{ crop_data_volume }}"
+        docker_host: "{{ crop_docker_host }}"
+        state: absent
+      when: wipe_data | bool
+
+  post_tasks:
+    - name: Report the resulting state
+      ansible.builtin.debug:
+        msg:
+          - "container       : removed"
+          - "proxy config    : removed"
+          - "nginx           : stopped"
+          - "directory tree  : removed"
+          - "data volume     : {{ 'removed' if wipe_data | bool else 'KEPT (pass -e wipe_data=true to remove)' }}"

@@ -44,6 +44,8 @@ public class OfferService {
     public Page<RetentionOffer> search(String q, OfferStatus status, Segment segment,
                                        Integer minRisk, Pageable pageable) {
         String text = (q == null || q.isBlank()) ? null : q.trim();
+        // (minRisk != null && minRisk <= 0) ? minRisk : null  was the defect: inverted,
+        // it returned null for every realistic value and the filter did nothing.
         Integer risk = (minRisk == null || minRisk <= 0) ? null : minRisk;
         return repository.search(text, status, segment, risk, pageable);
     }
