@@ -29,6 +29,14 @@ public class OfferController {
 
     private static final int PAGE_SIZE = 10;
 
+    /**
+     * Default ordering for the offer list. The list is the agent's work queue, so the
+     * customers most likely to churn come first and recent activity is only the
+     * tie-breaker (issue #17).
+     */
+    private static final Sort HIGHEST_RISK_FIRST =
+            Sort.by(Sort.Order.desc("churnRisk"), Sort.Order.desc("updatedAt"));
+
     private final OfferService offers;
     private final OfferWorkflow workflow;
 
@@ -67,9 +75,13 @@ public class OfferController {
                        @RequestParam(defaultValue = "0") int page,
                        Model model) {
 
+        // Conflict resolution (develop <- bugfix/17): this branch added the search and
+        // filter parameters while develop replaced the inline Sort with the named
+        // HIGHEST_RISK_FIRST constant. Both are kept - the search signature from here,
+        // the named ordering from develop - because they are the same intent expressed
+        // in two places, and the constant says why the ordering exists.
         Page<RetentionOffer> results = offers.search(q, status, segment, minRisk,
-                PageRequest.of(Math.max(page, 0), PAGE_SIZE,
-                        Sort.by(Sort.Direction.DESC, "churnRisk").and(Sort.by(Sort.Direction.DESC, "updatedAt"))));
+                PageRequest.of(Math.max(page, 0), PAGE_SIZE, HIGHEST_RISK_FIRST));
 
         model.addAttribute("results", results);
         model.addAttribute("q", q);
