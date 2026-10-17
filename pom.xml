@@ -23,8 +23,11 @@
     <java.version>17</java.version>
     <maven.compiler.release>17</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <!-- Base URL the Selenium suite runs against; overridden by Jenkins -->
-    <selenium.base.url>http://localhost:8070</selenium.base.url>
+    <selenium.version>4.27.0</selenium.version>
+    <!-- The Selenium suite drives a throwaway instance started by this build on
+         selenium.port. Jenkins overrides selenium.base.url to test a deployed server. -->
+    <selenium.port>8095</selenium.port>
+    <selenium.base.url>http://localhost:${selenium.port}</selenium.base.url>
     <selenium.headless>true</selenium.headless>
   </properties>
 
@@ -81,6 +84,15 @@
       <artifactId>spring-security-test</artifactId>
       <scope>test</scope>
     </dependency>
+
+    <!-- Selenium WebDriver. 4.x ships Selenium Manager, which resolves and downloads a
+         matching chromedriver by itself, so no driver binary is committed or installed. -->
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-java</artifactId>
+      <version>${selenium.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -89,6 +101,26 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <executions>
+          <!-- Start a throwaway instance for the Selenium suite and stop it afterwards,
+               so `mvn verify` is self-contained and does not depend on someone having
+               remembered to start the application first. -->
+          <execution>
+            <id>start-app-for-selenium</id>
+            <goals><goal>start</goal></goals>
+            <configuration>
+              <arguments>
+                <argument>--server.port=${selenium.port}</argument>
+                <!-- a fresh database per run keeps the journeys deterministic -->
+                <argument>--spring.datasource.url=jdbc:h2:file:${project.build.directory}/selenium-data/retention</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>stop-app-after-selenium</id>
+            <goals><goal>stop</goal></goals>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -97,6 +129,36 @@
           <!-- unit tests only; Selenium ITs run under failsafe -->
           <excludes><exclude>**/*IT.java</exclude></excludes>
         </configuration>
+      </plugin>
+
+      <!-- Failsafe runs the Selenium journeys in the integration-test phase, so
+           `mvn test` stays fast and `mvn verify` is the full gate. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <configuration>
+          <includes><include>**/*IT.java</include></includes>
+          <systemPropertyVariables>
+            <selenium.base.url>${selenium.base.url}</selenium.base.url>
+            <selenium.headless>${selenium.headless}</selenium.headless>
+            <selenium.screenshot.dir>${project.build.directory}/selenium-screenshots</selenium.screenshot.dir>
+          </systemPropertyVariables>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Renders the failsafe XML into a browsable HTML report under target/reports. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-report-plugin</artifactId>
+        <version>3.5.4</version>
       </plugin>
     </plugins>
   </build>
