@@ -72,9 +72,15 @@ class J3_SearchAndFilterIT extends BaseSeleniumIT {
     @Order(5)
     @DisplayName("status, segment and risk filters combine with each other")
     void filtersCombine() {
+        int unfiltered = totalResults();
+
         select(By.id("status"), "Pending approval");
         type(By.id("minRisk"), "70");
         click(By.id("apply-filters"));
+
+        assertThat(totalResults())
+                .as("combining two filters must narrow the result set")
+                .isLessThan(unfiltered);
 
         var statuses = driver.findElements(By.cssSelector("table.data tbody tr .pill"));
         assertThat(statuses).isNotEmpty();
@@ -91,6 +97,30 @@ class J3_SearchAndFilterIT extends BaseSeleniumIT {
 
     @Test
     @Order(6)
+    @DisplayName("the minimum-risk filter actually excludes lower-risk offers")
+    void minimumRiskFilterExcludesLowerRiskOffers() {
+        int unfiltered = totalResults();
+        assertThat(unfiltered).as("the seeded book").isGreaterThanOrEqualTo(24);
+
+        // 85 is chosen so that the filter must remove rows: only a handful of seeded
+        // offers sit at or above it
+        type(By.id("minRisk"), "85");
+        click(By.id("apply-filters"));
+
+        int filtered = totalResults();
+
+        assertThat(filtered)
+                .as("a filter that excludes nothing is not filtering")
+                .isLessThan(unfiltered);
+        assertThat(filtered).as("but it must not exclude everything").isGreaterThan(0);
+
+        var risks = driver.findElements(By.cssSelector("table.data tbody tr .risk"));
+        assertThat(risks.stream().map(e -> Integer.parseInt(e.getText().trim())))
+                .allMatch(r -> r >= 85);
+    }
+
+    @Test
+    @Order(7)
     @DisplayName("a search that matches nothing shows an empty state, not a blank table")
     void emptyStateWhenNothingMatches() {
         type(By.id("q"), "zzzz-no-such-customer-zzzz");
@@ -103,7 +133,7 @@ class J3_SearchAndFilterIT extends BaseSeleniumIT {
     }
 
     @Test
-    @Order(7)
+    @Order(8)
     @DisplayName("Reset clears every filter and returns the whole pipeline")
     void resetClearsFilters() {
         select(By.id("segment"), "Enterprise");
@@ -117,7 +147,7 @@ class J3_SearchAndFilterIT extends BaseSeleniumIT {
     }
 
     @Test
-    @Order(8)
+    @Order(9)
     @DisplayName("active filters survive a move to the next page")
     void filtersSurvivePagination() {
         type(By.id("minRisk"), "40");
@@ -131,5 +161,17 @@ class J3_SearchAndFilterIT extends BaseSeleniumIT {
         var risks = driver.findElements(By.cssSelector("table.data tbody tr .risk"));
         assertThat(risks.stream().map(e -> Integer.parseInt(e.getText().trim())))
                 .allMatch(r -> r >= 40);
+    }
+
+    // ----------------------------------------------------------------- helpers
+
+    /** Total matching records, read from the "N records - page X of Y" header. */
+    private int totalResults() {
+        if (!driver.findElements(By.cssSelector(".empty")).isEmpty()) {
+            return 0;
+        }
+        String header = waitFor(By.cssSelector("table.data")).findElement(By.xpath("../.."))
+                .findElement(By.cssSelector(".card-head .sub")).getText();
+        return Integer.parseInt(header.replaceAll("^(\\d+).*", "$1"));
     }
 }
