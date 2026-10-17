@@ -1,0 +1,88 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<!--
+  Jenkins job definition for the Customer Retention Offer Platform CI build.
+
+  Kept in the repository so the job can be recreated from scratch with:
+      jenkins-cli create-job crop-ci-build < jenkins/crop-ci-build.config.xml
+-->
+<project>
+  <description>&lt;b&gt;Continuous integration build&lt;/b&gt; for the Customer Retention Offer Platform.&lt;br/&gt;
+Polls &lt;code&gt;develop&lt;/code&gt; every two minutes, runs &lt;code&gt;mvn clean package&lt;/code&gt; on JDK 17,
+publishes the JUnit results and archives &lt;code&gt;crop.war&lt;/code&gt;.&lt;br/&gt;
+Backlog item &lt;b&gt;M11&lt;/b&gt; / issue #11.</description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <jenkins.model.BuildDiscarderProperty>
+      <strategy class="hudson.tasks.LogRotator">
+        <daysToKeep>-1</daysToKeep>
+        <numToKeep>25</numToKeep>
+        <artifactDaysToKeep>-1</artifactDaysToKeep>
+        <artifactNumToKeep>10</artifactNumToKeep>
+      </strategy>
+    </jenkins.model.BuildDiscarderProperty>
+    <com.coravy.hudson.plugins.github.GithubProjectProperty plugin="github">
+      <projectUrl>https://github.com/shreyasat7/customer-retention-offer-platform/</projectUrl>
+      <displayName></displayName>
+    </com.coravy.hudson.plugins.github.GithubProjectProperty>
+  </properties>
+  <scm class="hudson.plugins.git.GitSCM" plugin="git">
+    <configVersion>2</configVersion>
+    <userRemoteConfigs>
+      <hudson.plugins.git.UserRemoteConfig>
+        <url>https://github.com/shreyasat7/customer-retention-offer-platform.git</url>
+      </hudson.plugins.git.UserRemoteConfig>
+    </userRemoteConfigs>
+    <branches>
+      <hudson.plugins.git.BranchSpec>
+        <name>*/develop</name>
+      </hudson.plugins.git.BranchSpec>
+    </branches>
+    <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+    <submoduleCfg class="empty-list"/>
+    <extensions/>
+  </scm>
+  <canRoam>true</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <jdk>jdk17</jdk>
+  <triggers>
+    <!-- Scheduled polling: Jenkins asks GitHub every two minutes whether develop moved. -->
+    <hudson.triggers.SCMTrigger>
+      <spec>H/2 * * * *</spec>
+      <ignorePostCommitHooks>false</ignorePostCommitHooks>
+    </hudson.triggers.SCMTrigger>
+  </triggers>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.tasks.Maven plugin="maven-plugin">
+      <targets>clean package</targets>
+      <mavenName>maven3</mavenName>
+      <usePrivateRepository>false</usePrivateRepository>
+      <settings class="jenkins.mvn.DefaultSettingsProvider"/>
+      <globalSettings class="jenkins.mvn.DefaultGlobalSettingsProvider"/>
+      <injectBuildVariables>false</injectBuildVariables>
+    </hudson.tasks.Maven>
+  </builders>
+  <publishers>
+    <hudson.tasks.ArtifactArchiver>
+      <artifacts>target/crop.war</artifacts>
+      <allowEmptyArchive>false</allowEmptyArchive>
+      <onlyIfSuccessful>true</onlyIfSuccessful>
+      <fingerprint>true</fingerprint>
+      <defaultExcludes>true</defaultExcludes>
+      <caseSensitive>true</caseSensitive>
+      <followSymlinks>false</followSymlinks>
+    </hudson.tasks.ArtifactArchiver>
+    <hudson.tasks.junit.JUnitResultArchiver plugin="junit">
+      <testResults>target/surefire-reports/*.xml</testResults>
+      <keepLongStdio>false</keepLongStdio>
+      <healthScaleFactor>1.0</healthScaleFactor>
+      <allowEmptyResults>true</allowEmptyResults>
+      <skipPublishingChecks>true</skipPublishingChecks>
+    </hudson.tasks.junit.JUnitResultArchiver>
+  </publishers>
+  <buildWrappers>
+    <hudson.plugins.timestamper.TimestamperBuildWrapper plugin="timestamper"/>
+  </buildWrappers>
+</project>
