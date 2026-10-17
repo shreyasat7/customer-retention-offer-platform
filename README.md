@@ -103,6 +103,7 @@ APP_PORT=8070 java -jar target/crop.war
 | 8081 | Nginx reverse proxy |
 | 5001 | Local Docker registry |
 | 5002 | Docker registry web interface |
+| 8092 | Dozzle — Docker web interface |
 
 ---
 
