@@ -1,0 +1,94 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:fragment="shell(pageTitle, pageSub, active, actions, body)">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="|${pageTitle} · CROP|">CROP</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232563eb'/><text x='16' y='22' font-size='16' font-family='Arial' font-weight='bold' fill='white' text-anchor='middle'>C</text></svg>">
+</head>
+<body>
+<div class="shell">
+
+  <!-- ------------------------------------------------------------ sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">CR</div>
+      <div class="brand-text">
+        <strong>Retention OPS</strong>
+        <span>Offer Platform</span>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-label">Workspace</div>
+
+      <a th:href="@{/dashboard}" th:classappend="${active == 'dashboard'} ? 'active'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/>
+          <rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/>
+        </svg>
+        <span>Dashboard</span>
+      </a>
+
+      <a th:href="@{/offers}" th:classappend="${active == 'offers'} ? 'active'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>
+        </svg>
+        <span>All offers</span>
+      </a>
+
+      <a th:href="@{/offers(status='PENDING_APPROVAL')}" th:classappend="${active == 'approvals'} ? 'active'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/>
+        </svg>
+        <span>Approvals</span>
+        <span class="count" th:if="${pendingCount != null and pendingCount > 0}" th:text="${pendingCount}">0</span>
+      </a>
+
+      <div class="nav-label" sec:authorize="hasRole('AGENT')">Actions</div>
+      <a sec:authorize="hasRole('AGENT')" th:href="@{/offers/new}" th:classappend="${active == 'new'} ? 'active'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+        </svg>
+        <span>New offer</span>
+      </a>
+    </nav>
+
+    <div class="side-user">
+      <div class="avatar" th:text="${#strings.toUpperCase(#strings.substring(#authentication.name,0,2))}">AG</div>
+      <div class="who">
+        <b th:text="${#authentication.name}">user</b>
+        <span th:text="${#strings.replace(#strings.arrayJoin(#authentication.authorities,', '),'ROLE_','')}">ROLE</span>
+      </div>
+      <form th:action="@{/logout}" method="post">
+        <button class="icon-btn" type="submit" title="Sign out" aria-label="Sign out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- --------------------------------------------------------------- main -->
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <div class="crumb" th:text="${pageSub}">subtitle</div>
+        <h1 th:text="${pageTitle}">Page</h1>
+      </div>
+      <div class="spacer"></div>
+      <div th:replace="${actions}"></div>
+    </header>
+
+    <div class="content">
+      <div th:replace="${body}"></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

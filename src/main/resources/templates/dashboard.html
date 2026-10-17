@@ -1,0 +1,52 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: shell('Dashboard', 'Retention performance overview', 'dashboard', ~{}, ~{::section})}">
+<body>
+<section>
+
+  <div class="alert alert--info">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/><line x1="12" y1="16" x2="12" y2="11.5"/><circle cx="12" cy="8" r="0.6" fill="currentColor"/></svg>
+    <span><b>Sprint 1 skeleton.</b> Authentication, the domain model and the application shell are in place.
+      Offer management and the KPI dashboard land in Sprint 2 (backlog items M2–M9).</span>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-head"><h2>Runtime status</h2></div>
+      <div class="card-body">
+        <dl class="dl">
+          <dt>Application</dt><dd th:text="${appName}">CROP</dd>
+          <dt>Version</dt><dd><span class="tag" th:text="${appVersion}">1.0.0</span></dd>
+          <dt>Signed in as</dt><dd th:text="${#authentication.name}">user</dd>
+          <dt>Granted roles</dt>
+          <dd th:text="${#strings.replace(#strings.arrayJoin(#authentication.authorities,', '),'ROLE_','')}">ROLE</dd>
+          <dt>Java runtime</dt><dd th:text="${javaVersion}">17</dd>
+          <dt>Server port</dt><dd th:text="${serverPort}">8070</dd>
+          <dt>Database</dt><dd th:text="${database}">H2</dd>
+          <dt>Health endpoint</dt><dd><a th:href="@{/actuator/health}">/actuator/health</a></dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>MVP roadmap</h2><div class="spacer"></div>
+        <span class="tag">15 backlog items</span></div>
+      <div class="card-body">
+        <div class="timeline">
+          <div class="tl-item done"><div class="t">M1 · Role-based login and logout</div>
+            <div class="m">Delivered — Spring Security, three roles</div></div>
+          <div class="tl-item done"><div class="t">Domain model and persistence</div>
+            <div class="m">Delivered — RetentionOffer entity, 7-state workflow enum, H2</div></div>
+          <div class="tl-item wait"><div class="t">M2–M4 · Create and view offers</div>
+            <div class="m">Sprint 1, feature/create-view-offer</div></div>
+          <div class="tl-item wait"><div class="t">M5–M9 · Edit, search, workflow, dashboard</div>
+            <div class="m">Sprint 2, feature/workflow-search-dashboard</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+</body>
+</html>

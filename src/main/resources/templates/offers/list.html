@@ -1,0 +1,18 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: shell('Retention offers', 'All offers raised by the team', 'offers', ~{}, ~{::section})}">
+<body>
+<section>
+  <div class="card">
+    <div class="card-head"><h2>Offers</h2></div>
+    <div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+        <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+      <h3>No offers yet</h3>
+      <p>Offer creation arrives with backlog item M2 on the <code>feature/create-view-offer</code> branch.</p>
+    </div>
+  </div>
+</section>
+</body>
+</html>
