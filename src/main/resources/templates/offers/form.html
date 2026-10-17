@@ -1,0 +1,122 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: shell('New retention offer', 'Raise an offer for an at-risk customer', 'new', ~{::#actions}, ~{::section})}">
+<body>
+
+<div id="actions">
+  <a class="btn btn--ghost" th:href="@{/offers}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    Back to offers
+  </a>
+</div>
+
+<section>
+  <form th:action="@{/offers}" th:object="${offer}" method="post" novalidate>
+
+    <!-- #fields resolves against the enclosing th:object, so the validation summary
+         must live inside the form, not above it. -->
+    <div class="alert alert--bad" th:if="${#fields.hasAnyErrors()}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12.5"/><circle cx="12" cy="16" r="0.6" fill="currentColor"/></svg>
+      <span><b>This offer was not saved.</b> Correct the highlighted fields and submit again.</span>
+    </div>
+    <div class="card" style="max-width:920px">
+      <div class="card-head">
+        <div>
+          <h2>Offer details</h2>
+          <div class="sub">The offer is saved as a <b>draft</b> — it reaches the customer only after a manager approves it.</div>
+        </div>
+      </div>
+
+      <div class="card-body">
+
+        <div class="form-section">
+          <h3>Customer</h3>
+          <div class="form-grid">
+            <div class="field">
+              <label for="customerName">Customer name<span class="req">*</span></label>
+              <input type="text" id="customerName" th:field="*{customerName}"
+                     th:classappend="${#fields.hasErrors('customerName')} ? 'err'" placeholder="Aarav Mehta">
+              <div class="err-msg" th:if="${#fields.hasErrors('customerName')}" th:errors="*{customerName}"></div>
+            </div>
+            <div class="field">
+              <label for="customerEmail">Customer email<span class="req">*</span></label>
+              <input type="email" id="customerEmail" th:field="*{customerEmail}"
+                     th:classappend="${#fields.hasErrors('customerEmail')} ? 'err'" placeholder="aarav.mehta@example.com">
+              <div class="err-msg" th:if="${#fields.hasErrors('customerEmail')}" th:errors="*{customerEmail}"></div>
+            </div>
+            <div class="field">
+              <label for="accountId">Account ID<span class="req">*</span></label>
+              <input type="text" id="accountId" th:field="*{accountId}"
+                     th:classappend="${#fields.hasErrors('accountId')} ? 'err'" placeholder="ACC-10231">
+              <div class="hint" th:unless="${#fields.hasErrors('accountId')}">4–24 letters, digits or hyphens</div>
+              <div class="err-msg" th:if="${#fields.hasErrors('accountId')}" th:errors="*{accountId}"></div>
+            </div>
+            <div class="field">
+              <label for="segment">Segment<span class="req">*</span></label>
+              <select id="segment" th:field="*{segment}" th:classappend="${#fields.hasErrors('segment')} ? 'err'">
+                <option value="">Select a segment…</option>
+                <option th:each="s : ${segments}" th:value="${s}" th:text="${s.label}">Plus</option>
+              </select>
+              <div class="err-msg" th:if="${#fields.hasErrors('segment')}" th:errors="*{segment}"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Risk and value</h3>
+          <div class="form-grid">
+            <div class="field">
+              <label for="churnRisk">Churn risk score<span class="req">*</span></label>
+              <input type="number" id="churnRisk" th:field="*{churnRisk}" min="0" max="100"
+                     th:classappend="${#fields.hasErrors('churnRisk')} ? 'err'" placeholder="78">
+              <div class="hint" th:unless="${#fields.hasErrors('churnRisk')}">0–100, supplied by the analytics team</div>
+              <div class="err-msg" th:if="${#fields.hasErrors('churnRisk')}" th:errors="*{churnRisk}"></div>
+            </div>
+            <div class="field">
+              <label for="monthlyValue">Current monthly value (&#8377;)<span class="req">*</span></label>
+              <input type="number" id="monthlyValue" th:field="*{monthlyValue}" step="0.01" min="0"
+                     th:classappend="${#fields.hasErrors('monthlyValue')} ? 'err'" placeholder="2499.00">
+              <div class="err-msg" th:if="${#fields.hasErrors('monthlyValue')}" th:errors="*{monthlyValue}"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>The offer</h3>
+          <div class="form-grid">
+            <div class="field">
+              <label for="offerType">Offer type<span class="req">*</span></label>
+              <select id="offerType" th:field="*{offerType}" th:classappend="${#fields.hasErrors('offerType')} ? 'err'">
+                <option value="">Select an offer type…</option>
+                <option th:each="t : ${offerTypes}" th:value="${t}" th:text="${t.label}">Discount %</option>
+              </select>
+              <div class="err-msg" th:if="${#fields.hasErrors('offerType')}" th:errors="*{offerType}"></div>
+            </div>
+            <div class="field">
+              <label for="offerValue">Offer value<span class="req">*</span></label>
+              <input type="number" id="offerValue" th:field="*{offerValue}" step="0.01" min="0"
+                     th:classappend="${#fields.hasErrors('offerValue')} ? 'err'" placeholder="20">
+              <div class="hint" th:unless="${#fields.hasErrors('offerValue')}">Percent, months, tiers or rupees depending on the type</div>
+              <div class="err-msg" th:if="${#fields.hasErrors('offerValue')}" th:errors="*{offerValue}"></div>
+            </div>
+            <div class="field span2">
+              <label for="notes">Notes</label>
+              <textarea id="notes" th:field="*{notes}"
+                        th:classappend="${#fields.hasErrors('notes')} ? 'err'"
+                        placeholder="Why this customer is at risk and why this offer is the right response…"></textarea>
+              <div class="err-msg" th:if="${#fields.hasErrors('notes')}" th:errors="*{notes}"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <a class="btn btn--ghost" th:href="@{/offers}">Cancel</a>
+        <button class="btn btn--primary" type="submit" id="save-offer">Save as draft</button>
+      </div>
+    </div>
+  </form>
+</section>
+</body>
+</html>
