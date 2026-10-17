@@ -1,0 +1,81 @@
+---
+# ===========================================================================
+#  Deploy the application as a container and prove it is serving traffic.
+# ===========================================================================
+
+- name: Pull the application image from the registry
+  community.docker.docker_image:
+    name: "{{ crop_image }}"
+    docker_host: "{{ crop_docker_host }}"
+    source: pull
+    force_source: "{{ crop_force_pull | default(false) }}"
+    state: present
+  register: image_pull
+
+- name: Read the image digest actually deployed
+  ansible.builtin.command: >-
+    docker image inspect {{ crop_image }}
+    --format '{% raw %}{{index .RepoDigests 0}}{% endraw %}'
+  register: image_digest
+  changed_when: false
+  failed_when: false
+
+- name: Run the application container
+  community.docker.docker_container:
+    name: "{{ crop_container_name }}"
+    docker_host: "{{ crop_docker_host }}"
+    image: "{{ crop_image }}"
+    state: started
+    # recreate only when the declared state differs from what is running,
+    # which is what makes a second run report changed=0
+    recreate: false
+    restart_policy: "{{ crop_restart_policy }}"
+    published_ports:
+      - "{{ crop_container_port }}:{{ crop_internal_port }}"
+    volumes:
+      - "{{ crop_data_volume }}:/app/data"
+    labels:
+      crop.managed_by: "ansible"
+      crop.environment: "{{ node_environment }}"
+      crop.image_tag: "{{ crop_image_tag }}"
+    env:
+      APP_PORT: "{{ crop_internal_port | string }}"
+      CROP_DATA_DIR: "/app/data"
+  register: container
+
+- name: Report what is running
+  ansible.builtin.debug:
+    msg: >-
+      container={{ crop_container_name }}
+      image={{ crop_image }}
+      digest={{ image_digest.stdout | default('n/a') }}
+
+# ----------------------------------------------------------------- health check
+
+- name: Wait for the application to report healthy
+  ansible.builtin.uri:
+    url: "http://localhost:{{ crop_container_port }}{{ crop_health_path }}"
+    return_content: true
+    status_code: 200
+  register: health
+  until: health.status == 200 and (health.json.status | default('')) == 'UP'
+  retries: "{{ crop_health_retries }}"
+  delay: "{{ crop_health_delay }}"
+  changed_when: false
+
+- name: Report the health check result
+  ansible.builtin.debug:
+    msg: >-
+      HEALTH {{ health.json.status }} —
+      db={{ health.json.components.db.status | default('n/a') }},
+      disk={{ health.json.components.diskSpace.status | default('n/a') }}
+
+- name: Fail the play if the container is not reporting healthy to Docker
+  ansible.builtin.command: >-
+    docker inspect {{ crop_container_name }}
+    --format '{% raw %}{{.State.Health.Status}}{% endraw %}'
+  register: docker_health
+  changed_when: false
+  retries: 20
+  delay: 3
+  until: docker_health.stdout == 'healthy'

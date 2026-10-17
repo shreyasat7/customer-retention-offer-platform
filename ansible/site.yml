@@ -1,0 +1,47 @@
+---
+# ===========================================================================
+#  Provision a CROP application node and deploy the application onto it.
+#
+#      ansible-playbook site.yml
+#      ansible-playbook site.yml -e crop_image_tag=11      # a specific build
+#      ansible-playbook site.yml --check --diff            # dry run
+#      ansible-playbook site.yml --tags proxy              # one concern only
+# ===========================================================================
+
+- name: Provision and deploy the Customer Retention Offer Platform
+  hosts: crop_app
+  gather_facts: true
+
+  pre_tasks:
+    - name: Announce the target
+      ansible.builtin.debug:
+        msg: >-
+          Provisioning {{ inventory_hostname }} —
+          image {{ crop_registry }}/{{ crop_image_name }}:{{ crop_image_tag }},
+          container port {{ crop_container_port }},
+          proxy port {{ crop_proxy_port }}
+      tags: [always]
+
+  roles:
+    - role: prerequisites
+      tags: [prereq, provision]
+
+    - role: app_container
+      tags: [app, deploy]
+
+    - role: nginx_proxy
+      when: crop_proxy_enabled | bool
+      tags: [proxy]
+
+  post_tasks:
+    - name: Summarise the provisioned node
+      ansible.builtin.debug:
+        msg:
+          - "node           : {{ inventory_hostname }} ({{ node_environment }})"
+          - "image          : {{ crop_image }}"
+          - "container      : {{ crop_container_name }} on :{{ crop_container_port }}"
+          - "direct URL     : http://localhost:{{ crop_container_port }}"
+          - "proxied URL    : http://localhost:{{ crop_proxy_port }}"
+          - "health         : http://localhost:{{ crop_proxy_port }}{{ crop_health_path }}"
+          - "config         : {{ crop_config_dir }}/crop.env"
+      tags: [always]

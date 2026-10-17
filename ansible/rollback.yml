@@ -1,0 +1,66 @@
+---
+# ===========================================================================
+#  Roll the application back to a previously published image tag.
+#
+#      ansible-playbook rollback.yml -e rollback_to=11
+#
+#  The data volume is never touched: the container is disposable, the H2
+#  database is not. Rolling back replaces the running code and leaves every
+#  retention offer in place.
+# ===========================================================================
+
+- name: Roll back the Customer Retention Offer Platform
+  hosts: crop_app
+  gather_facts: true
+
+  vars:
+    rollback_to: "{{ rollback_to | default('') }}"
+
+  pre_tasks:
+    - name: Require a target tag
+      ansible.builtin.assert:
+        that:
+          - rollback_to | length > 0
+        fail_msg: >-
+          Specify the tag to roll back to, e.g.
+          ansible-playbook rollback.yml -e rollback_to=11
+        success_msg: "Rolling back to tag {{ rollback_to }}"
+
+    - name: Record what is running before the rollback
+      ansible.builtin.command: >-
+        docker inspect {{ crop_container_name }}
+        --format '{% raw %}{{.Config.Image}}{% endraw %}'
+      register: before_image
+      changed_when: false
+      failed_when: false
+
+    - name: Confirm the target tag exists in the registry
+      ansible.builtin.uri:
+        url: "http://{{ crop_registry }}/v2/{{ crop_image_name }}/tags/list"
+        return_content: true
+      register: registry_tags
+      changed_when: false
+
+    - name: Fail if the requested tag was never published
+      ansible.builtin.assert:
+        that:
+          - rollback_to in (registry_tags.json.tags | default([]))
+        fail_msg: >-
+          Tag '{{ rollback_to }}' is not in the registry.
+          Published tags: {{ registry_tags.json.tags | default([]) | join(', ') }}
+        success_msg: "Tag {{ rollback_to }} is present in the registry"
+
+  roles:
+    - role: app_container
+      vars:
+        crop_image_tag: "{{ rollback_to }}"
+        crop_force_pull: true
+
+  post_tasks:
+    - name: Report the rollback
+      ansible.builtin.debug:
+        msg:
+          - "rolled back from : {{ before_image.stdout | default('nothing running') }}"
+          - "rolled back to   : {{ crop_registry }}/{{ crop_image_name }}:{{ rollback_to }}"
+          - "health           : {{ health.json.status | default('unknown') }}"
+          - "data volume      : {{ crop_data_volume }} (untouched)"

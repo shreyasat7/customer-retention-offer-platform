@@ -1,0 +1,60 @@
+---
+# ===========================================================================
+#  Configuration specification for a CROP application node.
+#  Everything a node needs is declared here; the roles only act on it.
+# ===========================================================================
+
+# ------------------------------------------------------------------ identity
+crop_app_name: "Customer Retention Offer Platform"
+crop_owner: "{{ lookup('env', 'USER') }}"
+
+# ----------------------------------------------------------------- filesystem
+crop_base_dir: "{{ lookup('env', 'HOME') }}/crop-platform"
+crop_config_dir: "{{ crop_base_dir }}/config"
+crop_logs_dir: "{{ crop_base_dir }}/logs"
+crop_releases_dir: "{{ crop_base_dir }}/releases"
+
+# ------------------------------------------------------- container runtime
+# Docker Desktop on macOS does not use /var/run/docker.sock, which is what the
+# docker SDK assumes. The socket of the active context is declared here so the
+# community.docker modules talk to the same daemon as the docker CLI.
+crop_docker_host: "unix://{{ lookup('env', 'HOME') }}/.docker/run/docker.sock"
+
+# --------------------------------------------------------------------- image
+crop_registry: "localhost:5001"
+crop_image_name: "crop"
+crop_image_tag: "latest"
+crop_image: "{{ crop_registry }}/{{ crop_image_name }}:{{ crop_image_tag }}"
+
+# ----------------------------------------------------------------- container
+crop_container_name: "crop-app"
+crop_container_port: 8090          # published on the host
+crop_internal_port: 8080           # the port inside the container
+crop_data_volume: "crop-data"
+crop_restart_policy: "unless-stopped"
+
+# --------------------------------------------------------------- reverse proxy
+crop_proxy_enabled: true
+crop_proxy_port: 8081
+crop_nginx_prefix: "/opt/homebrew/opt/nginx"
+crop_nginx_conf_dir: "/opt/homebrew/etc/nginx"
+crop_nginx_servers_dir: "{{ crop_nginx_conf_dir }}/servers"
+# Homebrew's default nginx server also wants 8080, which Jenkins already holds.
+crop_nginx_default_port_from: 8080
+crop_nginx_default_port_to: 8099
+
+# ------------------------------------------------------------- health checking
+crop_health_path: "/actuator/health"
+crop_health_retries: 40
+crop_health_delay: 3
+
+# --------------------------------------------------------- required packages
+crop_required_packages:
+  - nginx
+  - curl
+
+# ------------------------------------------ ports this node must have free/ours
+crop_required_ports:
+  - { port: 8090, purpose: "application container" }
+  - { port: 8081, purpose: "nginx reverse proxy" }
+  - { port: 5001, purpose: "docker registry" }

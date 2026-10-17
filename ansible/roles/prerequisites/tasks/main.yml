@@ -1,0 +1,108 @@
+---
+# ===========================================================================
+#  Everything a node needs before the application can run on it:
+#  packages, directories, configuration files, ports and services.
+# ===========================================================================
+
+- name: Report the node this play is configuring
+  ansible.builtin.debug:
+    msg: >-
+      Configuring {{ inventory_hostname }}
+      ({{ ansible_facts['system'] }} {{ ansible_facts['distribution'] | default('') }},
+      role={{ node_role }}, environment={{ node_environment }})
+
+# ------------------------------------------------------------------ packages
+
+- name: Ensure required Homebrew packages are installed
+  community.general.homebrew:
+    name: "{{ crop_required_packages }}"
+    state: present
+  register: brew_packages
+
+# ------------------------------------------------------------ container host
+
+- name: Verify the container runtime is reachable
+  ansible.builtin.command: docker info --format '{% raw %}{{.ServerVersion}}{% endraw %}'
+  register: docker_version
+  changed_when: false          # a check never changes anything
+  failed_when: docker_version.rc != 0
+
+- name: Report the container runtime
+  ansible.builtin.debug:
+    msg: "Docker Engine {{ docker_version.stdout }} is available"
+
+- name: Fail early if the image registry is not reachable
+  ansible.builtin.uri:
+    url: "http://{{ crop_registry }}/v2/"
+    status_code: [200, 401]
+  register: registry_probe
+  changed_when: false
+  retries: 3
+  delay: 2
+  until: registry_probe is succeeded
+
+# --------------------------------------------------------------- directories
+
+- name: Ensure the platform directory tree exists
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ crop_base_dir }}"
+    - "{{ crop_config_dir }}"
+    - "{{ crop_logs_dir }}"
+    - "{{ crop_releases_dir }}"
+
+# --------------------------------------------------------------------- files
+
+- name: Write the node environment file
+  ansible.builtin.copy:
+    dest: "{{ crop_config_dir }}/crop.env"
+    mode: "0644"
+    content: |
+      # Managed by Ansible - do not edit by hand.
+      # Rendered for {{ inventory_hostname }} ({{ node_environment }}).
+      CROP_APP_NAME={{ crop_app_name }}
+      CROP_IMAGE={{ crop_image }}
+      CROP_CONTAINER_NAME={{ crop_container_name }}
+      CROP_CONTAINER_PORT={{ crop_container_port }}
+      CROP_INTERNAL_PORT={{ crop_internal_port }}
+      CROP_DATA_VOLUME={{ crop_data_volume }}
+      CROP_PROXY_PORT={{ crop_proxy_port }}
+      CROP_HEALTH_URL=http://localhost:{{ crop_container_port }}{{ crop_health_path }}
+
+- name: Record the configuration specification on the node
+  ansible.builtin.template:
+    src: node-spec.md.j2
+    dest: "{{ crop_config_dir }}/node-spec.md"
+    mode: "0644"
+
+# ---------------------------------------------------------------- data volume
+
+- name: Ensure the application data volume exists
+  community.docker.docker_volume:
+    name: "{{ crop_data_volume }}"
+    state: present
+    docker_host: "{{ crop_docker_host }}"
+
+# --------------------------------------------------------------------- ports
+
+- name: Record which required ports are currently in use
+  ansible.builtin.shell: >-
+    lsof -nP -iTCP:{{ item.port }} -sTCP:LISTEN -t 2>/dev/null | head -1
+  register: port_check
+  changed_when: false
+  failed_when: false
+  loop: "{{ crop_required_ports }}"
+  loop_control:
+    label: "{{ item.port }} ({{ item.purpose }})"
+
+- name: Report port allocation
+  ansible.builtin.debug:
+    msg: >-
+      port {{ item.item.port }} ({{ item.item.purpose }}):
+      {{ 'in use by pid ' ~ item.stdout if item.stdout | length > 0 else 'free' }}
+  loop: "{{ port_check.results }}"
+  loop_control:
+    label: "{{ item.item.port }}"

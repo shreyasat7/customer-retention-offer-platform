@@ -1,0 +1,14 @@
+---
+- name: Reload nginx
+  ansible.builtin.shell: |
+    set -eu
+    if /opt/homebrew/bin/brew services list | grep -E '^nginx\s+started' >/dev/null 2>&1; then
+      /opt/homebrew/opt/nginx/bin/nginx -s reload
+      echo RELOADED
+    else
+      echo NOT_RUNNING_YET
+    fi
+  register: nginx_reload
+  # report changed only when a reload really happened, so the handler cannot
+  # manufacture a false "changed" on an otherwise clean run
+  changed_when: "'RELOADED' in nginx_reload.stdout"

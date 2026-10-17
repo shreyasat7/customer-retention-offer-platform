@@ -1,0 +1,60 @@
+---
+# ===========================================================================
+#  Put nginx in front of the container, so the application is reached through
+#  a proxy on a stable port rather than through the container's own mapping.
+# ===========================================================================
+
+- name: Ensure the nginx server-config directory exists
+  ansible.builtin.file:
+    path: "{{ crop_nginx_servers_dir }}"
+    state: directory
+    mode: "0755"
+
+# Homebrew's stock nginx.conf also listens on 8080, which Jenkins already holds.
+# Moving the default server keeps nginx startable without editing it by hand.
+- name: Move the stock nginx default server off the Jenkins port
+  ansible.builtin.replace:
+    path: "{{ crop_nginx_conf_dir }}/nginx.conf"
+    regexp: '(\s+)listen(\s+){{ crop_nginx_default_port_from }};'
+    replace: '\1listen\g<2>{{ crop_nginx_default_port_to }};'
+  notify: Reload nginx
+
+- name: Install the CROP reverse-proxy server block
+  ansible.builtin.template:
+    src: crop.conf.j2
+    dest: "{{ crop_nginx_servers_dir }}/crop.conf"
+    mode: "0644"
+  notify: Reload nginx
+
+- name: Validate the nginx configuration before touching the service
+  ansible.builtin.command: "{{ crop_nginx_prefix }}/bin/nginx -t"
+  register: nginx_test
+  changed_when: false
+  failed_when: nginx_test.rc != 0
+
+- name: Ensure nginx is running
+  ansible.builtin.shell: |
+    set -eu
+    if /opt/homebrew/bin/brew services list | grep -E '^nginx\s+started' >/dev/null 2>&1; then
+      echo "ALREADY_RUNNING"
+    else
+      /opt/homebrew/bin/brew services start nginx >/dev/null
+      echo "STARTED"
+    fi
+  register: nginx_service
+  changed_when: "'STARTED' in nginx_service.stdout"
+
+- name: Wait for the proxy to serve the application
+  ansible.builtin.uri:
+    url: "http://localhost:{{ crop_proxy_port }}{{ crop_health_path }}"
+    return_content: true
+    status_code: 200
+  register: proxy_health
+  until: proxy_health.status == 200 and (proxy_health.json.status | default('')) == 'UP'
+  retries: 20
+  delay: 3
+  changed_when: false
+
+- name: Report the proxied endpoint
+  ansible.builtin.debug:
+    msg: "Reverse proxy healthy at http://localhost:{{ crop_proxy_port }} -> container :{{ crop_container_port }}"
